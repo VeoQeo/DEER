@@ -58,14 +58,14 @@ class OSConfig:
     """Конфигурация операционной системы"""
     def __init__(self):
         # Основные настройки ОС
-        self.NAME = "BELL"
-        self.VERSION = "0.6.0"
+        self.NAME = "OS"
+        self.VERSION = "0.0.1"
         self.AUTHOR = "Anonymous OSDev"
         self.DESCRIPTION = "A simple 64-bit OS that prints 'ABC 64 BIT'"
         self.BUILD_DATE = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         # --- Динамические имена файлов ---
-        self.ELF_KERNEL = f'{self.NAME.lower()}.kernel'
+        self.ELF_KERNEL = f'{self.NAME.lower()}.elf'
         self.BIN_KERNEL = f'{self.NAME.lower()}.bin'
         self.ISO_OUTPUT = f'{self.NAME.lower()}.iso'
 
@@ -166,7 +166,7 @@ class OSConfig:
     def create_default_config(self, config_file: str = 'os_config.json') -> None:
         default_config = {
             'NAME': 'OS',
-            'VERSION': '0.6.0',
+            'VERSION': '0.0.1',
             'AUTHOR': 'Anonymous OSDev',
             'DESCRIPTION': 'A simple 64-bit OS that prints \'ABC 64 BIT\'',
             'ARCH': 'x86_64',
@@ -193,7 +193,7 @@ class OSConfig:
 
     def _update_dynamic_names(self):
         """Обновить имена файлов при изменении NAME"""
-        self.ELF_KERNEL = f'{self.NAME.lower()}.kernel'
+        self.ELF_KERNEL = f'{self.NAME.lower()}.elf'
         self.BIN_KERNEL = f'{self.NAME.lower()}.bin'
         self.ISO_OUTPUT = f'{self.NAME.lower()}.iso'
 
@@ -400,11 +400,13 @@ menuentry "{self.config.NAME} OS v{self.config.VERSION}" {{
         self.ensure_dir(boot_dir)
         self.ensure_dir(grub_dir)
 
-        # Копируем .bin и .kernel
-        shutil.copy(kernel_bin, f"{boot_dir}/{self.config.BIN_KERNEL}")
+        # Копируем .efi (ELF) вместо .bin
         kernel_elf = self.config.get_kernel_output()
-        if os.path.exists(kernel_elf):
-            shutil.copy(kernel_elf, f"{boot_dir}/{self.config.ELF_KERNEL}")
+        if not os.path.exists(kernel_elf):
+            self.config.log(f"Фатально: ELF ядро не найдено: {kernel_elf}", LogLevel.CRITICAL)
+            sys.exit(1)
+
+        shutil.copy(kernel_elf, f"{boot_dir}/{self.config.ELF_KERNEL}")  # deer.efi
 
         # Копируем grub.cfg
         shutil.copy(grub_cfg_src, f"{grub_dir}/{GRUB_CONFIG}")

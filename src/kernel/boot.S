@@ -47,31 +47,26 @@ gdt64_pointer:
 .section .text
 .code32
 _start:
-	movl	$stack_top, %esp
+    movl    $stack_top, %esp
+    movl    %ebx, %edi            # multiboot info struct → %edi
 
-	movl	%ebx, %edi			# Передаём multiboot info struct в %edi
+    call    check_multiboot
+    call    check_cpuid
+    call    check_long_mode
+    call    set_up_page_tables
+    call    enable_paging
+    call    set_up_SSE
 
-	# Проверки перед переходом
-	call	check_multiboot
-	call	check_cpuid
-	call	check_long_mode
-	call	set_up_page_tables
-	call	enable_paging
-	call	set_up_SSE
+    lgdt    (gdt64_pointer)
 
-	# Загружаем GDT
-	lgdt	(gdt64_pointer)
+    movw    $gdt64_data_seg, %ax
+    movw    %ax, %ss
+    movw    %ax, %ds
+    movw    %ax, %es
 
-	# Устанавливаем data segments на data selector
-	movw	$gdt64_data_seg, %ax
-	movw	%ax, %ss
-	movw	%ax, %ds
-	movw	%ax, %es
-
-	# Переход в 64-битный режим
-	ljmp	$gdt64_code_seg, $kernel_main
-
-
+    # === Передать multiboot_info в kernel_main ===
+    pushl   %edi                  # Сохраняем multiboot_info как аргумент
+    ljmp    $gdt64_code_seg, $kernel_main
 # === Вспомогательные функции ===
 
 set_up_page_tables:
