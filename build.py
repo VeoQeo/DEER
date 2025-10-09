@@ -29,7 +29,6 @@ import glob
 # === 🔧 Константы: имена ключевых файлов (базовые, БЕЗ жёсткого имени ОС) ===
 KERNEL_SRC = 'kernel.c'
 BOOT_ASM = 'boot.S'
-MB_HEADER = 'mb2.S'
 LINKER_SCRIPT = 'link.ld'
 GRUB_CONFIG = 'grub.cfg'
 
@@ -284,7 +283,7 @@ class BuildSystem:
 
     def find_sources(self, extensions: Tuple[str, ...] = ('.c', '.S', '.asm')) -> List[str]:
         sources = []
-        exclude_files = {BOOT_ASM, MB_HEADER}
+        exclude_files = {BOOT_ASM}
 
         for directory in self.config.SOURCE_DIRS:
             for root, _, files in os.walk(directory):
@@ -565,19 +564,31 @@ menuentry "{self.config.NAME} OS v{self.config.VERSION}" {{
             sources = self.find_sources()
             objects = self.compile_sources(sources, self.config.BUILD_DIR)
             
-            for asm in [MB_HEADER, BOOT_ASM]:
-                obj = os.path.join(self.config.BUILD_DIR, f"{asm.split('.')[0]}.o")
-                src = f"src/{asm}"
-                cmd = f"{self.config.CC} {self.config.CFLAGS} -x assembler-with-cpp -c {src} -o {obj}"
-                self.config.log(f"Компиляция: {src}", LogLevel.INFO)
+            # === Компиляция ОДНОГО boot.s (с встроенным mb2) ===
+            boot_src = f"src/kernel/{BOOT_ASM}"
+            obj = os.path.join(self.config.BUILD_DIR, "boot.o")
+
+            if not os.path.exists(boot_src):
+                self.config.log(f"Фатально: не найден файл {boot_src}", LogLevel.CRITICAL)
+                sys.exit(1)
+
+            cmd = (
+                f"{self.config.CC} {self.config.CFLAGS} "
+                f"-x assembler-with-cpp -c {boot_src} -o {obj}"
+            )
+            self.config.log(f"Компиляция: {boot_src}", LogLevel.INFO)
+            try:
                 subprocess.run(cmd, shell=True, check=True)
-                objects.insert(0, obj)
+                objects.insert(0, obj)  # Должен быть первым!
+            except subprocess.CalledProcessError as e:
+                self.config.log(f"Ошибка компиляции boot.s: {e}", LogLevel.ERROR)
+                sys.exit(1)
 
             elf_kernel_path = self.config.get_kernel_output()
             self.link_kernel(
                 objects=objects,
                 output=elf_kernel_path,
-                linker_script=f"src/{LINKER_SCRIPT}"
+                linker_script=f"src/kernel/{LINKER_SCRIPT}"
             )
 
             bin_kernel_path = self.config.get_kernel_binary()
