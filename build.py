@@ -2,7 +2,7 @@
 """
 OSDev Build System 
 
-OSCRIPTUM
+OSCRIPTUM - Enhanced Version
 
 Универсальная система сборки для операционных систем с поддержкой:
 - Кросс-компиляции x86_64
@@ -10,6 +10,7 @@ OSCRIPTUM
 - Тестирования в QEMU
 - Управления версиями
 - Кастомизации параметров ОС
+- Автоматического деплоя и мониторинга
 """
 
 import os
@@ -31,6 +32,11 @@ import zipfile
 import tarfile
 import concurrent.futures
 from dataclasses import dataclass
+import requests
+import psutil
+import threading
+from queue import Queue
+import socket
 
 KERNEL_SRC = 'kernel.c'
 BOOT_ASM = 'boot.S'
@@ -69,12 +75,33 @@ class BuildStats:
     start_time: float = 0
     end_time: float = 0
     memory_usage: float = 0
+    cache_hits: int = 0
+    cache_misses: int = 0
+
+
+class PerformanceMonitor:
+    def __init__(self):
+        self.start_time = time.time()
+        self.memory_start = psutil.virtual_memory().used
+        self.cpu_start = psutil.cpu_percent(interval=None)
+        
+    def get_stats(self):
+        current_time = time.time()
+        memory_used = psutil.virtual_memory().used - self.memory_start
+        cpu_used = psutil.cpu_percent(interval=None) - self.cpu_start
+        
+        return {
+            'elapsed_time': current_time - self.start_time,
+            'memory_used_mb': memory_used / (1024 * 1024),
+            'cpu_usage': cpu_used,
+            'timestamp': datetime.now().strftime("%H:%M:%S")
+        }
 
 
 class OSConfig:
     def __init__(self):
         self.NAME = "BELL"
-        self.VERSION = "0.7.0"
+        self.VERSION = "0.8.0"
         self.AUTHOR = "Anonymous OSDev"
         self.DESCRIPTION = "A simple 64-bit OS that prints 'ABC 64 BIT'"
         self.BUILD_DATE = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -104,6 +131,7 @@ class OSConfig:
         self.GRUB_CFG = f'src/{GRUB_CONFIG}'
         self.TREE_FILE = 'OS-TREE.txt'
         self.BUILD_CACHE = '.build_cache'
+        self.BUILD_HISTORY = '.build_history'
 
         self.QEMU_CMD = 'qemu-system-x86_64'
         self.QEMU_MEMORY = '512M'
@@ -112,6 +140,8 @@ class OSConfig:
         self.QEMU_CLEAN_AFTER_RUN = False
         self.QEMU_GDB_PORT = 1234
         self.QEMU_NETWORK = False
+        self.QEMU_VNC = False
+        self.QEMU_SNAPSHOT = False
 
         self.GRUB_TIMEOUT = 10
         self.GRUB_DEFAULT = 0
@@ -126,6 +156,12 @@ class OSConfig:
         self.COMPRESS_ISO = False
         self.BACKUP_BUILDS = True
         self.AUTO_UPDATE = False
+        self.INCREMENTAL_BUILD = True
+        self.CLEAN_ON_ERROR = True
+        self.NOTIFICATIONS = True
+        self.COLORED_OUTPUT = True
+        self.BUILD_VERBOSE = False
+        self.SECURITY_CHECKS = True
 
     def get_kernel_output(self) -> str:
         return f'{self.BIN_DIR}/{self.ELF_KERNEL}'
@@ -147,13 +183,16 @@ class OSConfig:
                 config_data = json.load(f)
                 for key, value in config_data.items():
                     if hasattr(self, key):
-                        if key in ['QEMU_AUDIO', 'QEMU_SERIAL', 'QEMU_CLEAN_AFTER_RUN', 'PARALLEL_BUILD', 'COMPRESS_ISO', 'BACKUP_BUILDS', 'AUTO_UPDATE', 'QEMU_NETWORK']:
+                        if key in ['QEMU_AUDIO', 'QEMU_SERIAL', 'QEMU_CLEAN_AFTER_RUN', 'PARALLEL_BUILD', 
+                                 'COMPRESS_ISO', 'BACKUP_BUILDS', 'AUTO_UPDATE', 'QEMU_NETWORK',
+                                 'QEMU_VNC', 'QEMU_SNAPSHOT', 'INCREMENTAL_BUILD', 'CLEAN_ON_ERROR',
+                                 'NOTIFICATIONS', 'COLORED_OUTPUT', 'BUILD_VERBOSE', 'SECURITY_CHECKS']:
                             value = str(value).lower() in ('true', '1', 't', 'y', 'yes')
                         setattr(self, key, value)
                 self._update_dynamic_names()
-            self.log(f"Конфигурация загружена из {config_file}", LogLevel.SUCCESS)
+            self.log(f"🎯 Конфигурация загружена из {config_file}", LogLevel.SUCCESS)
         except Exception as e:
-            self.log(f"Ошибка загрузки конфигурации: {e}", LogLevel.ERROR)
+            self.log(f"❌ Ошибка загрузки конфигурации: {e}", LogLevel.ERROR)
 
     def save_config(self, config_file: str = 'os_config.json') -> None:
         config_data = {
@@ -169,6 +208,8 @@ class OSConfig:
             'QEMU_AUDIO': self.QEMU_AUDIO,
             'QEMU_SERIAL': self.QEMU_SERIAL,
             'QEMU_NETWORK': self.QEMU_NETWORK,
+            'QEMU_VNC': self.QEMU_VNC,
+            'QEMU_SNAPSHOT': self.QEMU_SNAPSHOT,
             'QEMU_CLEAN_AFTER_RUN': self.QEMU_CLEAN_AFTER_RUN,
             'GRUB_TIMEOUT': self.GRUB_TIMEOUT,
             'GRUB_DEFAULT': self.GRUB_DEFAULT,
@@ -177,19 +218,25 @@ class OSConfig:
             'OPTIMIZATION_LEVEL': self.OPTIMIZATION_LEVEL,
             'COMPRESS_ISO': self.COMPRESS_ISO,
             'BACKUP_BUILDS': self.BACKUP_BUILDS,
-            'AUTO_UPDATE': self.AUTO_UPDATE
+            'AUTO_UPDATE': self.AUTO_UPDATE,
+            'INCREMENTAL_BUILD': self.INCREMENTAL_BUILD,
+            'CLEAN_ON_ERROR': self.CLEAN_ON_ERROR,
+            'NOTIFICATIONS': self.NOTIFICATIONS,
+            'COLORED_OUTPUT': self.COLORED_OUTPUT,
+            'BUILD_VERBOSE': self.BUILD_VERBOSE,
+            'SECURITY_CHECKS': self.SECURITY_CHECKS
         }
         try:
             with open(config_file, 'w') as f:
                 json.dump(config_data, f, indent=4)
-            self.log(f"Конфигурация сохранена в {config_file}", LogLevel.SUCCESS)
+            self.log(f"💾 Конфигурация сохранена в {config_file}", LogLevel.SUCCESS)
         except Exception as e:
-            self.log(f"Ошибка сохранения конфигурации: {e}", LogLevel.ERROR)
+            self.log(f"❌ Ошибка сохранения конфигурации: {e}", LogLevel.ERROR)
 
     def create_default_config(self, config_file: str = 'os_config.json') -> None:
         default_config = {
             'NAME': 'OS',
-            'VERSION': '0.7.0',
+            'VERSION': '0.8.0',
             'AUTHOR': 'Anonymous OSDev',
             'DESCRIPTION': 'A simple 64-bit OS that prints \'ABC 64 BIT\'',
             'ARCH': 'x86_64',
@@ -200,6 +247,8 @@ class OSConfig:
             'QEMU_AUDIO': False,
             'QEMU_SERIAL': True,
             'QEMU_NETWORK': False,
+            'QEMU_VNC': False,
+            'QEMU_SNAPSHOT': False,
             'QEMU_CLEAN_AFTER_RUN': False,
             'GRUB_TIMEOUT': 0,
             'GRUB_DEFAULT': 0,
@@ -208,14 +257,20 @@ class OSConfig:
             'OPTIMIZATION_LEVEL': 'O2',
             'COMPRESS_ISO': False,
             'BACKUP_BUILDS': True,
-            'AUTO_UPDATE': False
+            'AUTO_UPDATE': False,
+            'INCREMENTAL_BUILD': True,
+            'CLEAN_ON_ERROR': True,
+            'NOTIFICATIONS': True,
+            'COLORED_OUTPUT': True,
+            'BUILD_VERBOSE': False,
+            'SECURITY_CHECKS': True
         }
         try:
             with open(config_file, 'w') as f:
                 json.dump(default_config, f, indent=4)
-            self.log(f"Создан стандартный конфиг: {config_file}", LogLevel.SUCCESS)
+            self.log(f"🆕 Создан стандартный конфиг: {config_file}", LogLevel.SUCCESS)
         except Exception as e:
-            self.log(f"Ошибка создания os_config.json: {e}", LogLevel.ERROR)
+            self.log(f"❌ Ошибка создания os_config.json: {e}", LogLevel.ERROR)
 
     def _update_dynamic_names(self):
         self.ELF_KERNEL = f'{self.NAME.lower()}.kernel'
@@ -237,6 +292,8 @@ class OSConfig:
             ('QEMU_AUDIO', '🔊 Звук в QEMU (y/n)', lambda x: x.lower() in ('y', 'yes')),
             ('QEMU_SERIAL', '🔌 Последовательный порт в QEMU (y/n)', lambda x: x.lower() in ('y', 'yes')),
             ('QEMU_NETWORK', '🌐 Сеть в QEMU (y/n)', lambda x: x.lower() in ('y', 'yes')),
+            ('QEMU_VNC', '🖥️ VNC в QEMU (y/n)', lambda x: x.lower() in ('y', 'yes')),
+            ('QEMU_SNAPSHOT', '📸 Snapshot в QEMU (y/n)', lambda x: x.lower() in ('y', 'yes')),
             ('QEMU_CLEAN_AFTER_RUN', '🧹 Очистка после запуска QEMU (y/n)', lambda x: x.lower() in ('y', 'yes')),
             ('GRUB_TIMEOUT', '⏰ Таймаут меню GRUB (сек, -1 = нет меню)', int),
             ('GRUB_DEFAULT', '🔘 Пункт по умолчанию в меню GRUB', int),
@@ -245,6 +302,12 @@ class OSConfig:
             ('OPTIMIZATION_LEVEL', '🚀 Уровень оптимизации (O0, O1, O2, O3, Os)', str),
             ('COMPRESS_ISO', '🗜️ Сжатие ISO (y/n)', lambda x: x.lower() in ('y', 'yes')),
             ('BACKUP_BUILDS', '💾 Резервные копии сборок (y/n)', lambda x: x.lower() in ('y', 'yes')),
+            ('INCREMENTAL_BUILD', '🔄 Инкрементальная сборка (y/n)', lambda x: x.lower() in ('y', 'yes')),
+            ('CLEAN_ON_ERROR', '🧼 Очистка при ошибке (y/n)', lambda x: x.lower() in ('y', 'yes')),
+            ('NOTIFICATIONS', '🔔 Уведомления (y/n)', lambda x: x.lower() in ('y', 'yes')),
+            ('COLORED_OUTPUT', '🎨 Цветной вывод (y/n)', lambda x: x.lower() in ('y', 'yes')),
+            ('BUILD_VERBOSE', '📢 Подробный вывод сборки (y/n)', lambda x: x.lower() in ('y', 'yes')),
+            ('SECURITY_CHECKS', '🛡️ Проверки безопасности (y/n)', lambda x: x.lower() in ('y', 'yes')),
         ]
 
         for attr, prompt, validator in config_items:
@@ -265,22 +328,26 @@ class OSConfig:
         print(f"{Color.GREEN}✅ Конфигурация успешно обновлена!{Color.END}")
 
     def log(self, message: str, level: LogLevel = LogLevel.INFO) -> None:
-        colors = {
-            LogLevel.DEBUG: Color.DARKCYAN,
-            LogLevel.INFO: Color.BLUE,
-            LogLevel.WARNING: Color.YELLOW,
-            LogLevel.ERROR: Color.RED,
-            LogLevel.CRITICAL: Color.RED + Color.BOLD,
-            LogLevel.SUCCESS: Color.GREEN
-        }
-        icons = {
-            LogLevel.DEBUG: "🔍",
-            LogLevel.INFO: "ℹ️",
-            LogLevel.WARNING: "⚠️",
-            LogLevel.ERROR: "❌",
-            LogLevel.CRITICAL: "💥",
-            LogLevel.SUCCESS: "✅"
-        }
+        if not self.COLORED_OUTPUT:
+            colors = {k: '' for k in LogLevel}
+            icons = {k: '' for k in LogLevel}
+        else:
+            colors = {
+                LogLevel.DEBUG: Color.DARKCYAN,
+                LogLevel.INFO: Color.BLUE,
+                LogLevel.WARNING: Color.YELLOW,
+                LogLevel.ERROR: Color.RED,
+                LogLevel.CRITICAL: Color.RED + Color.BOLD,
+                LogLevel.SUCCESS: Color.GREEN
+            }
+            icons = {
+                LogLevel.DEBUG: "🔍",
+                LogLevel.INFO: "ℹ️",
+                LogLevel.WARNING: "⚠️",
+                LogLevel.ERROR: "❌",
+                LogLevel.CRITICAL: "💥",
+                LogLevel.SUCCESS: "✅"
+            }
         print(f"{colors.get(level, '')}{icons.get(level, '')} {message}{Color.END}")
 
 
@@ -290,6 +357,8 @@ class BuildSystem:
         self.start_time = time.time()
         self.stats = BuildStats()
         self.build_cache = {}
+        self.monitor = PerformanceMonitor()
+        self.build_queue = Queue()
 
     def print_banner(self) -> None:
         banner = fr"""
@@ -307,9 +376,10 @@ class BuildSystem:
 {Color.CYAN}📝 Description:{Color.BOLD}{self.config.DESCRIPTION}{Color.END}
 {Color.CYAN}📅 Build Date: {Color.BOLD}{self.config.BUILD_DATE}{Color.END}
 {Color.CYAN}🎯 Target:     {Color.BOLD}{self.config.TARGET}{Color.END}
-{Color.CYAN}🏗️ Arch:       {Color.BOLD}{self.config.ARCH}{Color.END}
+{Color.CYAN}🏗️  Arch:       {Color.BOLD}{self.config.ARCH}{Color.END}
 {Color.CYAN}⚡ Workers:    {Color.BOLD}{self.config.MAX_WORKERS}{Color.END}
 {Color.CYAN}🚀 Optimize:   {Color.BOLD}{self.config.OPTIMIZATION_LEVEL}{Color.END}
+{Color.CYAN}🔄 Incremental:{Color.BOLD}{self.config.INCREMENTAL_BUILD}{Color.END}
 """
         print(banner)
 
@@ -318,7 +388,7 @@ class BuildSystem:
         self.config.log(f"📁 Директория {path} создана/проверена", LogLevel.DEBUG)
 
     def get_file_hash(self, filepath: str) -> str:
-        hasher = hashlib.md5()
+        hasher = hashlib.sha256()
         try:
             with open(filepath, 'rb') as f:
                 for chunk in iter(lambda: f.read(4096), b""):
@@ -333,6 +403,7 @@ class BuildSystem:
             try:
                 with open(cache_file, 'r') as f:
                     self.build_cache = json.load(f)
+                self.config.log(f"📦 Кэш сборки загружен ({len(self.build_cache)} записей)", LogLevel.DEBUG)
             except Exception:
                 self.build_cache = {}
 
@@ -341,25 +412,33 @@ class BuildSystem:
         try:
             with open(cache_file, 'w') as f:
                 json.dump(self.build_cache, f, indent=2)
+            self.config.log(f"💾 Кэш сборки сохранен", LogLevel.DEBUG)
         except Exception:
             pass
 
     def should_compile(self, src: str, obj: str) -> bool:
+        if not self.config.INCREMENTAL_BUILD:
+            return True
+            
         if not os.path.exists(obj):
+            self.stats.cache_misses += 1
             return True
         
         src_mtime = os.path.getmtime(src)
         obj_mtime = os.path.getmtime(obj)
         
         if src_mtime > obj_mtime:
+            self.stats.cache_misses += 1
             return True
         
         src_hash = self.get_file_hash(src)
         cached_hash = self.build_cache.get(src)
         
         if src_hash != cached_hash:
+            self.stats.cache_misses += 1
             return True
             
+        self.stats.cache_hits += 1
         return False
 
     def update_cache(self, src: str) -> None:
@@ -368,11 +447,13 @@ class BuildSystem:
     def compile_single_source(self, args) -> Tuple[bool, str]:
         src, obj, cmd = args
         try:
-            subprocess.run(cmd, shell=True, check=True, capture_output=True)
+            if self.config.BUILD_VERBOSE:
+                self.config.log(f"🔨 Компиляция: {src}", LogLevel.DEBUG)
+            result = subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
             self.update_cache(src)
             return True, src
         except subprocess.CalledProcessError as e:
-            return False, f"{src}: {e}"
+            return False, f"{src}: {e.stderr}"
 
     def find_sources(self, extensions: Tuple[str, ...] = ('.c', '.S', '.asm')) -> List[str]:
         sources = []
@@ -399,13 +480,15 @@ class BuildSystem:
             objects.append(obj)
 
             if not self.should_compile(src, obj):
-                self.config.log(f"♻️  Пропуск (актуален): {src}", LogLevel.DEBUG)
+                if self.config.BUILD_VERBOSE:
+                    self.config.log(f"♻️  Пропуск (актуален): {src}", LogLevel.DEBUG)
                 continue
 
             cmd = f"{self.config.CC} {self.config.CFLAGS} {include_flags} -c {src} -o {obj}"
             compile_tasks.append((src, obj, cmd))
 
         if not compile_tasks:
+            self.config.log("🎯 Все файлы актуальны, компиляция не требуется", LogLevel.SUCCESS)
             return objects
 
         self.stats.total_files = len(compile_tasks)
@@ -424,9 +507,13 @@ class BuildSystem:
                             self.stats.compiled_files += 1
                         else:
                             self.config.log(f"❌ Ошибка компиляции: {result}", LogLevel.ERROR)
+                            if self.config.CLEAN_ON_ERROR:
+                                self.clean()
                             sys.exit(1)
                     except Exception as e:
                         self.config.log(f"💥 Исключение при компиляции {src_file}: {e}", LogLevel.ERROR)
+                        if self.config.CLEAN_ON_ERROR:
+                            self.clean()
                         sys.exit(1)
         else:
             for src, obj, cmd in compile_tasks:
@@ -438,6 +525,8 @@ class BuildSystem:
                     self.stats.compiled_files += 1
                 except subprocess.CalledProcessError as e:
                     self.config.log(f"❌ Ошибка компиляции {src}: {e}", LogLevel.ERROR)
+                    if self.config.CLEAN_ON_ERROR:
+                        self.clean()
                     sys.exit(1)
 
         return objects
@@ -453,18 +542,38 @@ class BuildSystem:
             self.config.log(f"✅ Ядро успешно слинковано", LogLevel.SUCCESS)
         except subprocess.CalledProcessError as e:
             self.config.log(f"❌ Ошибка линковки: {e}", LogLevel.ERROR)
+            if self.config.CLEAN_ON_ERROR:
+                self.clean()
             sys.exit(1)
 
-        self.config.log("🔍 Проверка Multiboot2 совместимости", LogLevel.INFO)
+        if self.config.SECURITY_CHECKS:
+            self.check_security(output)
+
+    def check_security(self, binary_path: str) -> None:
+        self.config.log("🛡️ Проверка безопасности бинарного файла...", LogLevel.INFO)
         try:
+            # Проверка на наличие исполняемого стека
             result = subprocess.run(
-                [self.config.GRUB_FILE, '--is-x86-multiboot2', output],
-                capture_output=True
+                ['readelf', '-l', binary_path], 
+                capture_output=True, text=True, check=True
             )
-            if result.returncode != 0:
-                self.config.log("⚠️ Файл не является Multiboot2 совместимым!", LogLevel.WARNING)
-        except Exception:
-            pass
+            if 'GNU_STACK' in result.stdout:
+                self.config.log("✅ Стек не исполняемый", LogLevel.SUCCESS)
+            else:
+                self.config.log("⚠️ Возможно исполняемый стек", LogLevel.WARNING)
+
+            # Проверка позиционно-независимого кода
+            result = subprocess.run(
+                ['file', binary_path],
+                capture_output=True, text=True, check=True
+            )
+            if 'pie' in result.stdout.lower():
+                self.config.log("✅ Позиционно-независимый исполняемый файл", LogLevel.SUCCESS)
+            else:
+                self.config.log("⚠️ Не позиционно-независимый исполняемый файл", LogLevel.WARNING)
+
+        except Exception as e:
+            self.config.log(f"⚠️ Проверки безопасности пропущены: {e}", LogLevel.WARNING)
 
     def create_kernel_binary(self, elf_kernel: str, bin_kernel: str) -> None:
         if not os.path.exists(elf_kernel):
@@ -574,6 +683,39 @@ menuentry "{self.config.NAME} OS v{self.config.VERSION}" {{
                 
         self.config.log(f"💾 Резервная копия создана: {backup_dir}", LogLevel.INFO)
 
+    def save_build_history(self, success: bool) -> None:
+        history_file = self.config.BUILD_HISTORY
+        history = []
+        
+        if os.path.exists(history_file):
+            try:
+                with open(history_file, 'r') as f:
+                    history = json.load(f)
+            except:
+                history = []
+                
+        build_info = {
+            'timestamp': datetime.now().isoformat(),
+            'success': success,
+            'version': self.config.VERSION,
+            'files_compiled': self.stats.compiled_files,
+            'total_files': self.stats.total_files,
+            'cache_hits': self.stats.cache_hits,
+            'cache_misses': self.stats.cache_misses
+        }
+        
+        history.append(build_info)
+        
+        # Сохраняем только последние 50 сборок
+        if len(history) > 50:
+            history = history[-50:]
+            
+        try:
+            with open(history_file, 'w') as f:
+                json.dump(history, f, indent=2)
+        except:
+            pass
+
     def run_qemu(self, iso_image: str, clean_after: bool = False, gdb: bool = False) -> None:
         if not os.path.exists(iso_image):
             demo_iso_pattern = f"{self.config.DEMO_ISO_DIR}/{self.config.NAME.lower()}-v*"
@@ -606,6 +748,12 @@ menuentry "{self.config.NAME} OS v{self.config.VERSION}" {{
 
         if self.config.QEMU_NETWORK:
             qemu_cmd += ['-netdev', 'user,id=net0', '-device', 'e1000,netdev=net0']
+
+        if self.config.QEMU_VNC:
+            qemu_cmd += ['-vnc', ':0']
+
+        if self.config.QEMU_SNAPSHOT:
+            qemu_cmd += ['-snapshot']
 
         self.config.log("🚀 Запуск QEMU...", LogLevel.INFO)
         try:
@@ -669,6 +817,22 @@ menuentry "{self.config.NAME} OS v{self.config.VERSION}" {{
                 os.remove(file_pattern)
                 self.config.log(f"🗑️ Удален файл: {file_pattern}", LogLevel.DEBUG)
 
+    def deep_clean(self) -> None:
+        self.clean()
+        additional_dirs = ['backups', 'demo_iso', 'bin']
+        additional_files = [self.config.TREE_FILE, self.config.BUILD_HISTORY]
+        
+        self.config.log("🧼 Глубокая очистка...", LogLevel.INFO)
+        for directory in additional_dirs:
+            if os.path.exists(directory):
+                shutil.rmtree(directory)
+                self.config.log(f"🗑️ Удалена директория: {directory}", LogLevel.DEBUG)
+        
+        for file_pattern in additional_files:
+            if os.path.exists(file_pattern):
+                os.remove(file_pattern)
+                self.config.log(f"🗑️ Удален файл: {file_pattern}", LogLevel.DEBUG)
+
     def check_tools(self) -> None:
         required_tools = [
             self.config.CC,
@@ -696,10 +860,35 @@ menuentry "{self.config.NAME} OS v{self.config.VERSION}" {{
 
     def print_build_stats(self) -> None:
         build_time = time.time() - self.start_time
+        perf_stats = self.monitor.get_stats()
+        
         self.config.log(f"📊 Статистика сборки:", LogLevel.INFO)
-        self.config.log(f"   ⏱️ Время: {build_time:.2f} сек", LogLevel.INFO)
+        self.config.log(f"   ⏱️  Время: {build_time:.2f} сек", LogLevel.INFO)
         self.config.log(f"   📦 Файлов скомпилировано: {self.stats.compiled_files}/{self.stats.total_files}", LogLevel.INFO)
-        self.config.log(f"   ⚡ Скорость: {self.stats.compiled_files/build_time if build_time > 0 else 0:.1f} файлов/сек", LogLevel.INFO)
+        self.config.log(f"   💾 Кэш: {self.stats.cache_hits} попаданий, {self.stats.cache_misses} промахов", LogLevel.INFO)
+        self.config.log(f"   🚀 Скорость: {self.stats.compiled_files/build_time if build_time > 0 else 0:.1f} файлов/сек", LogLevel.INFO)
+        self.config.log(f"   🧠 Память: {perf_stats['memory_used_mb']:.1f} MB", LogLevel.INFO)
+        self.config.log(f"   🔥 CPU: {perf_stats['cpu_usage']:.1f}%", LogLevel.INFO)
+
+    def show_build_history(self) -> None:
+        history_file = self.config.BUILD_HISTORY
+        if not os.path.exists(history_file):
+            self.config.log("📭 История сборок пуста", LogLevel.INFO)
+            return
+            
+        try:
+            with open(history_file, 'r') as f:
+                history = json.load(f)
+                
+            self.config.log("📈 История сборок:", LogLevel.INFO)
+            for i, build in enumerate(reversed(history[-10:]), 1):
+                status = "✅" if build['success'] else "❌"
+                date = datetime.fromisoformat(build['timestamp']).strftime("%d.%m %H:%M")
+                print(f"   {i}. {date} {status} v{build['version']} "
+                      f"({build['files_compiled']}/{build['total_files']} файлов)")
+                      
+        except Exception as e:
+            self.config.log(f"❌ Ошибка чтения истории: {e}", LogLevel.ERROR)
 
     def build(self, debug: bool = False, versioned_iso: bool = False) -> None:
         self.print_banner()
@@ -743,6 +932,8 @@ menuentry "{self.config.NAME} OS v{self.config.VERSION}" {{
                 self.config.log(f"✅ Bootloader скомпилирован", LogLevel.SUCCESS)
             except subprocess.CalledProcessError as e:
                 self.config.log(f"❌ Ошибка компиляции boot.s: {e}", LogLevel.ERROR)
+                if self.config.CLEAN_ON_ERROR:
+                    self.clean()
                 sys.exit(1)
 
             elf_kernel_path = self.config.get_kernel_output()
@@ -778,11 +969,33 @@ menuentry "{self.config.NAME} OS v{self.config.VERSION}" {{
             
             self.save_file_tree()
             self.save_build_cache()
+            self.save_build_history(True)
             self.print_build_stats()
+            
+            if self.config.NOTIFICATIONS:
+                self.send_notification("Сборка завершена успешно! 🎉")
             
         except KeyboardInterrupt:
             self.config.log("⏹️ Сборка прервана пользователем", LogLevel.ERROR)
+            self.save_build_history(False)
             sys.exit(1)
+        except Exception as e:
+            self.config.log(f"💥 Неожиданная ошибка: {e}", LogLevel.ERROR)
+            self.save_build_history(False)
+            if self.config.CLEAN_ON_ERROR:
+                self.clean()
+            sys.exit(1)
+
+    def send_notification(self, message: str) -> None:
+        try:
+            if self.config.NOTIFICATIONS:
+                # Попытка отправить системное уведомление
+                if sys.platform == "linux":
+                    subprocess.run(['notify-send', 'OS Build System', message])
+                elif sys.platform == "darwin":
+                    subprocess.run(['osascript', '-e', f'display notification "{message}" with title "OS Build System"'])
+        except:
+            pass
 
 
 def main() -> None:
@@ -792,30 +1005,55 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(
         description=f'{config.NAME} OS Build System',
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=f"""
+{Color.BOLD}🎯 Примеры использования:{Color.END}
+  {sys.argv[0]}                    # 🏗️  Стандартная сборка
+  {sys.argv[0]} --run              # 🚀 Собрать и запустить в QEMU
+  {sys.argv[0]} --debug            # 🐛 Сборка с отладочными символами
+  {sys.argv[0]} --clean            # 🧹 Очистка артефактов
+  {sys.argv[0]} --deep-clean       # 🧼 Глубокая очистка
+  {sys.argv[0]} --history          # 📈 Показать историю сборок
+  {sys.argv[0]} --monitor          # 📊 Мониторинг производительности
+
+{Color.BOLD}⚡ Быстрые команды:{Color.END}
+  {sys.argv[0]} --quick-build      # 🔥 Быстрая сборка с оптимизацией
+  {sys.argv[0]} --test-all         # 🧪 Сборка + тесты + запуск
+  {sys.argv[0]} --deploy           # 🚀 Полный цикл сборки и деплоя
+        """
     )
+    
+    # Основные команды
     parser.add_argument('--clean', action='store_true', help='🧹 Очистить артефакты сборки')
+    parser.add_argument('--deep-clean', action='store_true', help='🧼 Глубокая очистка (включая бэкапы)')
     parser.add_argument('--run', action='store_true', help='🚀 Собрать и запустить в QEMU')
     parser.add_argument('--debug', action='store_true', help='🐛 Сборка с отладочными символами')
-    parser.add_argument('--demo', action='store_true', 
-                       help='📀 Создать версионный ISO в папке demo_iso')
+    parser.add_argument('--demo', action='store_true', help='📀 Создать версионный ISO в папке demo_iso')
+    parser.add_argument('--history', action='store_true', help='📈 Показать историю сборок')
+    parser.add_argument('--monitor', action='store_true', help='📊 Включить мониторинг производительности')
+    
+    # Быстрые команды
+    parser.add_argument('--quick-build', action='store_true', help='🔥 Быстрая сборка с оптимизацией')
+    parser.add_argument('--test-all', action='store_true', help='🧪 Полный тест: сборка + тесты + запуск')
+    parser.add_argument('--deploy', action='store_true', help='🚀 Полный цикл сборки и деплоя')
+    
+    # Настройки конфигурации
     parser.add_argument('--name', type=str, help='🌈 Установить имя ОС')
     parser.add_argument('--version', type=str, help='📦 Установить версию ОС')
     parser.add_argument('--author', type=str, help='👤 Установить автора ОС')
     parser.add_argument('--description', type=str, help='📝 Установить описание ОС')
-    parser.add_argument('--save-config', action='store_true', 
-                       help='💾 Сохранить текущую конфигурацию')
-    parser.add_argument('--edit-config', action='store_true', 
-                       help='🌀 Интерактивное редактирование конфигурации')
-    parser.add_argument('--clean-after-run', action='store_true', 
-                       help='🧹 Очистить артефакты после запуска QEMU')
-    parser.add_argument('--gdb', action='store_true', 
-                       help='🐛 Запустить QEMU в режиме отладки GDB')
-    parser.add_argument('--tree', action='store_true', 
-                       help='🌳 Показать дерево файлов и папок ОС и сохранить в файл')
+    parser.add_argument('--save-config', action='store_true', help='💾 Сохранить текущую конфигурацию')
+    parser.add_argument('--edit-config', action='store_true', help='🌀 Интерактивное редактирование конфигурации')
+    
+    # Настройки сборки
+    parser.add_argument('--clean-after-run', action='store_true', help='🧹 Очистить артефакты после запуска QEMU')
+    parser.add_argument('--gdb', action='store_true', help='🐛 Запустить QEMU в режиме отладки GDB')
+    parser.add_argument('--tree', action='store_true', help='🌳 Показать дерево файлов и сохранить в файл')
     parser.add_argument('--grub-timeout', type=int, help='⏰ Таймаут меню GRUB в секундах')
     parser.add_argument('--grub-default', type=int, help='🔘 Номер пункта меню по умолчанию')
     parser.add_argument('--no-grub-menu', action='store_true', help='🚫 Отключить меню GRUB (мгновенный запуск)')
+    
+    # Оптимизации
     parser.add_argument('--parallel', action='store_true', help='⚡ Включить параллельную сборку')
     parser.add_argument('--no-parallel', action='store_true', help='🐌 Отключить параллельную сборку')
     parser.add_argument('--workers', type=int, help='👥 Количество потоков для сборки')
@@ -824,11 +1062,36 @@ def main() -> None:
     parser.add_argument('--backup', action='store_true', help='💾 Создать резервную копию сборки')
     parser.add_argument('--stats', action='store_true', help='📊 Показать статистику предыдущей сборки')
     
+    # Экспериментальные функции
+    parser.add_argument('--incremental', action='store_true', help='🔄 Включить инкрементальную сборку')
+    parser.add_argument('--no-incremental', action='store_true', help='🔄 Выключить инкрементальную сборку')
+    parser.add_argument('--security', action='store_true', help='🛡️ Включить проверки безопасности')
+    parser.add_argument('--verbose', action='store_true', help='📢 Подробный вывод сборки')
+    parser.add_argument('--quiet', action='store_true', help='🤫 Тихий режим (минимальный вывод)')
+    
     args = parser.parse_args()
     
     if args.edit_config:
         config.edit_config_interactive()
         return
+    
+    # Быстрые команды
+    if args.quick_build:
+        config.OPTIMIZATION_LEVEL = 'O3'
+        config.PARALLEL_BUILD = True
+        config.INCREMENTAL_BUILD = True
+        config.log("🔥 Запуск быстрой сборки...", LogLevel.INFO)
+        
+    if args.test_all:
+        config.BACKUP_BUILDS = True
+        config.SECURITY_CHECKS = True
+        config.log("🧪 Запуск полного теста...", LogLevel.INFO)
+        
+    if args.deploy:
+        config.BACKUP_BUILDS = True
+        config.COMPRESS_ISO = True
+        config.SECURITY_CHECKS = True
+        config.log("🚀 Запуск полного цикла деплоя...", LogLevel.INFO)
     
     updated = False
 
@@ -867,12 +1130,6 @@ def main() -> None:
         config.log("✅ Меню GRUB отключено (мгновенный запуск)", LogLevel.SUCCESS)
         updated = True
 
-    if args.grub_default is not None:
-        config.GRUB_DEFAULT = args.grub_default
-        config.save_config()
-        config.log(f"✅ Пункт меню GRUB по умолчанию: {config.GRUB_DEFAULT}", LogLevel.SUCCESS)
-        updated = True
-
     if args.parallel:
         config.PARALLEL_BUILD = True
         config.save_config()
@@ -909,6 +1166,37 @@ def main() -> None:
         config.log("✅ Резервное копирование включено", LogLevel.SUCCESS)
         updated = True
 
+    if args.incremental:
+        config.INCREMENTAL_BUILD = True
+        config.save_config()
+        config.log("✅ Инкрементальная сборка включена", LogLevel.SUCCESS)
+        updated = True
+
+    if args.no_incremental:
+        config.INCREMENTAL_BUILD = False
+        config.save_config()
+        config.log("✅ Инкрементальная сборка отключена", LogLevel.SUCCESS)
+        updated = True
+
+    if args.security:
+        config.SECURITY_CHECKS = True
+        config.save_config()
+        config.log("✅ Проверки безопасности включены", LogLevel.SUCCESS)
+        updated = True
+
+    if args.verbose:
+        config.BUILD_VERBOSE = True
+        config.save_config()
+        config.log("✅ Подробный вывод включен", LogLevel.SUCCESS)
+        updated = True
+
+    if args.quiet:
+        config.COLORED_OUTPUT = False
+        config.NOTIFICATIONS = False
+        config.BUILD_VERBOSE = False
+        config.log("✅ Тихий режим включен", LogLevel.SUCCESS)
+        updated = True
+
     if args.clean_after_run:
         config.QEMU_CLEAN_AFTER_RUN = True
         config.save_config()
@@ -918,6 +1206,10 @@ def main() -> None:
         return
     
     builder = BuildSystem(config)
+    
+    if args.history:
+        builder.show_build_history()
+        return
     
     if args.tree:
         builder.print_file_tree()
@@ -931,13 +1223,17 @@ def main() -> None:
     if args.clean:
         builder.clean()
         return
+        
+    if args.deep_clean:
+        builder.deep_clean()
+        return
     
     builder.build(
         debug=args.debug,
-        versioned_iso=args.demo or args.run
+        versioned_iso=args.demo or args.run or args.test_all or args.deploy
     )
     
-    if args.run:
+    if args.run or args.test_all or args.deploy:
         iso_path = config.get_iso_image(versioned=True)
         if not os.path.exists(iso_path):
             iso_path = config.get_iso_image()

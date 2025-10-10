@@ -10,11 +10,22 @@
     "QEMU_MEMORY": "512M",
     "QEMU_AUDIO": false,
     "QEMU_SERIAL": true,
+    "QEMU_NETWORK": false,
+    "QEMU_VNC": false,
+    "QEMU_SNAPSHOT": false,
     "QEMU_CLEAN_AFTER_RUN": false,
     "GRUB_TIMEOUT": 10,
     "GRUB_DEFAULT": 0,
-    "GRUB_MENU_COLORS": {
-        "normal": "white/black",
-        "highlight": "black/light-gray"
-    }
+    "PARALLEL_BUILD": true,
+    "MAX_WORKERS": 8,
+    "OPTIMIZATION_LEVEL": "O2",
+    "COMPRESS_ISO": false,
+    "BACKUP_BUILDS": true,
+    "AUTO_UPDATE": false,
+    "INCREMENTAL_BUILD": true,
+    "CLEAN_ON_ERROR": true,
+    "NOTIFICATIONS": true,
+    "COLORED_OUTPUT": true,
+    "BUILD_VERBOSE": false,
+    "SECURITY_CHECKS": true
 }
