@@ -357,38 +357,38 @@ class BuildSystem:
         except subprocess.CalledProcessError as e:
             self.config.log(f"Ошибка создания .bin: {e}", LogLevel.ERROR)
             sys.exit(1)
-
+            
     def create_grub_cfg(self, grub_cfg_path: str) -> None:
-        # Всегда пересоздаём, если изменились параметры
-        should_create = True
+        """
+        Создаёт стандартный grub.cfg, ТОЛЬКО если он не существует.
+        Это позволяет пользователю редактировать свой собственный конфиг.
+        """
         if os.path.exists(grub_cfg_path):
-            try:
-                with open(grub_cfg_path, 'r') as f:
-                    content = f.read()
-                    timeout_match = f'timeout={self.config.GRUB_TIMEOUT}' in content
-                    default_match = f'default={self.config.GRUB_DEFAULT}' in content
-                    menuentry_match = f'menuentry "{self.config.NAME} OS v{self.config.VERSION}"' in content
-                    if timeout_match and default_match and menuentry_match:
-                        should_create = False
-            except Exception:
-                pass
-
-        if not should_create:
+            self.config.log(f"Используется существующий GRUB конфиг: {grub_cfg_path}", LogLevel.INFO)
             return
 
+        # Если файла нет — создаём шаблон по умолчанию
         grub_content = f"""
-timeout={self.config.GRUB_TIMEOUT}
-default={self.config.GRUB_DEFAULT}
-menuentry "{self.config.NAME} OS v{self.config.VERSION}" {{
-    multiboot2 /boot/{self.config.ELF_KERNEL}
-    boot
-}}
-"""
+    # === GRUB CONFIG FOR {self.config.NAME.upper()} ===
+    # Этот файл был создан автоматически.
+    # Теперь вы можете отредактировать его вручную.
+    # Следующие сборки будут использовать эту версию.
+
+    timeout={self.config.GRUB_TIMEOUT}
+    default={self.config.GRUB_DEFAULT}
+
+    menuentry "{self.config.NAME} OS v{self.config.VERSION}" {{
+        multiboot2 /boot/{self.config.ELF_KERNEL}
+        boot
+    }}
+    """
+
         try:
             self.ensure_dir(os.path.dirname(grub_cfg_path))
             with open(grub_cfg_path, 'w') as f:
-                f.write(grub_content.strip())
-            self.config.log(f"Создан/обновлён GRUB конфиг: {grub_cfg_path}", LogLevel.INFO)
+                f.write(grub_content.strip() + '\n')
+            self.config.log(f"✅ Создан стандартный GRUB конфиг: {grub_cfg_path}", LogLevel.INFO)
+            self.config.log(f"💡 Теперь вы можете отредактировать его вручную!", LogLevel.INFO)
         except Exception as e:
             self.config.log(f"Ошибка создания grub.cfg: {e}", LogLevel.ERROR)
             sys.exit(1)

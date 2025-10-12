@@ -1,23 +1,26 @@
 ENTRY(_start)
 
 SECTIONS {
-    . = 0x100000; /* Загрузка по адресу 1 МБ — стандартный выбор */
+    . = 0x100000;
 
-    .text BLOCK(4K) : ALIGN(4K) {
-        *(.multiboot)
-        *(.text)
+    .boot BLOCK(4K) : ALIGN(4K) {
+        KEEP(*(.multiboot))
     }
 
-    .rodata BLOCK(4K) : ALIGN(4K) {
-        *(.rodata)
+    .text : ALIGN(4K) {
+        *(.text*)
     }
 
-    .data BLOCK(4K) : ALIGN(4K) {
+    .rodata : ALIGN(4K) {
+        *(.rodata*)
+    }
+
+    .data : ALIGN(4K) {
         *(.data)
     }
 
-    .bss BLOCK(4K) : ALIGN(4K) {
-        *(COMMON)
+    .bss : ALIGN(4K) {
         *(.bss)
-    }
+        *(COMMON)
+    } =0
 }

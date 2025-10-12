@@ -1,0 +1,805 @@
+Дерево файлов ОС DEER v0.0.1
+Сгенерировано: 2025-10-12 23:20:55
+==================================================
+
+└── [ПАПКА .]
+    ├── [ПАПКА .GIT]
+    │   ├── [ФАЙЛ COMMIT_EDITMSG]
+    │   ├── [ФАЙЛ HEAD]
+    │   ├── [ФАЙЛ CONFIG]
+    │   ├── [ФАЙЛ DESCRIPTION]
+    │   ├── [ПАПКА HOOKS]
+    │   │   ├── [ФАЙЛ APPLYPATCH-MSG.SAMPLE]
+    │   │   ├── [ФАЙЛ COMMIT-MSG.SAMPLE]
+    │   │   ├── [ФАЙЛ FSMONITOR-WATCHMAN.SAMPLE]
+    │   │   ├── [ФАЙЛ POST-UPDATE.SAMPLE]
+    │   │   ├── [ФАЙЛ PRE-APPLYPATCH.SAMPLE]
+    │   │   ├── [ФАЙЛ PRE-COMMIT.SAMPLE]
+    │   │   ├── [ФАЙЛ PRE-MERGE-COMMIT.SAMPLE]
+    │   │   ├── [ФАЙЛ PRE-PUSH.SAMPLE]
+    │   │   ├── [ФАЙЛ PRE-REBASE.SAMPLE]
+    │   │   ├── [ФАЙЛ PRE-RECEIVE.SAMPLE]
+    │   │   ├── [ФАЙЛ PREPARE-COMMIT-MSG.SAMPLE]
+    │   │   ├── [ФАЙЛ PUSH-TO-CHECKOUT.SAMPLE]
+    │   │   ├── [ФАЙЛ SENDEMAIL-VALIDATE.SAMPLE]
+    │   │   └── [ФАЙЛ UPDATE.SAMPLE]
+    │   ├── [ФАЙЛ INDEX]
+    │   ├── [ПАПКА INFO]
+    │   │   └── [ФАЙЛ EXCLUDE]
+    │   ├── [ПАПКА LOGS]
+    │   │   ├── [ФАЙЛ HEAD]
+    │   │   └── [ПАПКА REFS]
+    │   │       ├── [ПАПКА HEADS]
+    │   │       │   └── [ФАЙЛ MAIN]
+    │   │       └── [ПАПКА REMOTES]
+    │   │           └── [ПАПКА ORIGIN]
+    │   │               ├── [ФАЙЛ HEAD]
+    │   │               └── [ФАЙЛ MAIN]
+    │   ├── [ПАПКА OBJECTS]
+    │   │   ├── [ПАПКА 0D]
+    │   │   │   └── [ФАЙЛ CD8031EC07243B099735B1488E251FF4105F15]
+    │   │   ├── [ПАПКА 11]
+    │   │   │   └── [ФАЙЛ 9E2E116762F8EE819E3C15163F79FA1E4D0718]
+    │   │   ├── [ПАПКА 13]
+    │   │   │   └── [ФАЙЛ 3E67C4AAEEAFA063AB8F2545BC0118DE74B6BB]
+    │   │   ├── [ПАПКА 28]
+    │   │   │   └── [ФАЙЛ 5C2A958557E8558326DFDBB4C3E7D136C23A6E]
+    │   │   ├── [ПАПКА 2D]
+    │   │   │   └── [ФАЙЛ 1915FF072A2873295A3C449EBA90A9A76F93C2]
+    │   │   ├── [ПАПКА 30]
+    │   │   │   └── [ФАЙЛ 53AE3D8086BAB1C016007DF507AFEB5D1F5CB4]
+    │   │   ├── [ПАПКА 31]
+    │   │   │   └── [ФАЙЛ F36717EDF5C428113FD55F55CCF31F13AE7867]
+    │   │   ├── [ПАПКА 39]
+    │   │   │   ├── [ФАЙЛ 86B225F55940C8D2E2BD4EDC751FB2411C7492]
+    │   │   │   └── [ФАЙЛ F4D9E8049AC08ED51A50B109FFB4AE2C5BBDA8]
+    │   │   ├── [ПАПКА 42]
+    │   │   │   └── [ФАЙЛ 173A4CDF6994CA9116E562B336CB3C63522A6C]
+    │   │   ├── [ПАПКА 48]
+    │   │   │   └── [ФАЙЛ 424126D77D6E4BC32652CBF932FAD1A55BC4C3]
+    │   │   ├── [ПАПКА 4C]
+    │   │   │   └── [ФАЙЛ 5F0F65087EAE276E5ABA78AF624D972CEEDCF2]
+    │   │   ├── [ПАПКА 4E]
+    │   │   │   └── [ФАЙЛ 4B95EBC2F79B4772312C280DB3304573D3E502]
+    │   │   ├── [ПАПКА 58]
+    │   │   │   └── [ФАЙЛ D429A72995AF6E4AEFA954C3A123933B9C701E]
+    │   │   ├── [ПАПКА 64]
+    │   │   │   ├── [ФАЙЛ 6D19EBB15DE2BF39213812553E66FDC6F04511]
+    │   │   │   └── [ФАЙЛ DFB1CF31913C9FAC466DAEE5CD4C9EFA66CDF6]
+    │   │   ├── [ПАПКА 6E]
+    │   │   │   └── [ФАЙЛ 5E054ED7440D825C58309C01BD7276B0B7721D]
+    │   │   ├── [ПАПКА 73]
+    │   │   │   ├── [ФАЙЛ AEE01A0A35CA53D2DA0A6BF68392B5D410265D]
+    │   │   │   └── [ФАЙЛ B0794A03A288BFD4F410F60C7B739520CFD259]
+    │   │   ├── [ПАПКА 77]
+    │   │   │   └── [ФАЙЛ 665465499637DD9AC32DFF3AE5D87EC41A07F3]
+    │   │   ├── [ПАПКА 7A]
+    │   │   │   └── [ФАЙЛ 652D0B4664025347B3689198846B846E494907]
+    │   │   ├── [ПАПКА 7D]
+    │   │   │   ├── [ФАЙЛ 674C45116307940935115510DFF2AAF447AD80]
+    │   │   │   └── [ФАЙЛ C3D592497E392F7EFA3F44967E1800D6814186]
+    │   │   ├── [ПАПКА 81]
+    │   │   │   └── [ФАЙЛ FFBEEFC5A16D209745DE1E38CC232652031AFB]
+    │   │   ├── [ПАПКА 89]
+    │   │   │   └── [ФАЙЛ FB50416827CEF10B9511ADD0A9940EB302FAB3]
+    │   │   ├── [ПАПКА 8A]
+    │   │   │   └── [ФАЙЛ 38129A7A6A34277D3D55EEF23F7D5B97EAD819]
+    │   │   ├── [ПАПКА 8E]
+    │   │   │   └── [ФАЙЛ C3570763D7F071064D2964AC576C45858DB9C1]
+    │   │   ├── [ПАПКА 9B]
+    │   │   │   └── [ФАЙЛ B8ABDE0B30F9445825C0C6A4D03541ABDD5CF3]
+    │   │   ├── [ПАПКА 9C]
+    │   │   │   └── [ФАЙЛ 8C6A99C5D3FE73051FA4A216768380AC97A82A]
+    │   │   ├── [ПАПКА 9F]
+    │   │   │   └── [ФАЙЛ 4C5DDFF09109B132FAD878F4831D957BD060BC]
+    │   │   ├── [ПАПКА B0]
+    │   │   │   └── [ФАЙЛ AB82D91157678B1E0D198503BCE57D07A5C53D]
+    │   │   ├── [ПАПКА BA]
+    │   │   │   └── [ФАЙЛ 941F954FCFC06A485AC49BCCC86A2B56B5A788]
+    │   │   ├── [ПАПКА BC]
+    │   │   │   └── [ФАЙЛ 3AF0B782A68DB507A37601A1A5755098ECB874]
+    │   │   ├── [ПАПКА BF]
+    │   │   │   └── [ФАЙЛ 2D44EB03A8973577157BD10B2C431DB2E85593]
+    │   │   ├── [ПАПКА C2]
+    │   │   │   └── [ФАЙЛ C7FE21356F7BEC0E61CF26A781B3DF0BC01385]
+    │   │   ├── [ПАПКА C6]
+    │   │   │   └── [ФАЙЛ 040AACDE79FA6DB6B8C22F79878FE3925CC58A]
+    │   │   ├── [ПАПКА CA]
+    │   │   │   └── [ФАЙЛ 3704FBD715E34372EEDBD20DFCC038AD377F24]
+    │   │   ├── [ПАПКА CF]
+    │   │   │   └── [ФАЙЛ 9B8CAE547445B5F0AEF4994C3CB89DB473358B]
+    │   │   ├── [ПАПКА D3]
+    │   │   │   └── [ФАЙЛ 4D65062ABA199CC19F7F02EF73A360957964AB]
+    │   │   ├── [ПАПКА D5]
+    │   │   │   └── [ФАЙЛ 884FFB4730642D05C9602B22FF40C46D1F23CD]
+    │   │   ├── [ПАПКА DC]
+    │   │   │   └── [ФАЙЛ F33E8286E80ED16086FFEAE97394A73E51618C]
+    │   │   ├── [ПАПКА E1]
+    │   │   │   └── [ФАЙЛ E8CC573E2414B520BEAF47451232DC0CD0F34F]
+    │   │   ├── [ПАПКА EB]
+    │   │   │   └── [ФАЙЛ 768362F2B62D669FA5E1457355C167F57FF846]
+    │   │   ├── [ПАПКА F8]
+    │   │   │   └── [ФАЙЛ D486D89AA5FAFFD314F73CDCF6FD91D053C6CB]
+    │   │   ├── [ПАПКА F9]
+    │   │   │   └── [ФАЙЛ 9CF9859A1DF2E316116CC480B2B8487DA97E8F]
+    │   │   ├── [ПАПКА FC]
+    │   │   │   └── [ФАЙЛ 37439AE199D3BAF910228690DAB3B54066CCCF]
+    │   │   ├── [ПАПКА FE]
+    │   │   │   └── [ФАЙЛ C658A67CFE0133C369D87F208C0EC9100FA45A]
+    │   │   ├── [ПАПКА INFO]
+    │   │   └── [ПАПКА PACK]
+    │   │       ├── [ФАЙЛ PACK-AC990E3E406515931E113641648246746FDF665A.IDX]
+    │   │       ├── [ФАЙЛ PACK-AC990E3E406515931E113641648246746FDF665A.PACK]
+    │   │       └── [ФАЙЛ PACK-AC990E3E406515931E113641648246746FDF665A.REV]
+    │   ├── [ФАЙЛ PACKED-REFS]
+    │   └── [ПАПКА REFS]
+    │       ├── [ПАПКА HEADS]
+    │       │   └── [ФАЙЛ MAIN]
+    │       ├── [ПАПКА REMOTES]
+    │       │   └── [ПАПКА ORIGIN]
+    │       │       ├── [ФАЙЛ HEAD]
+    │       │       └── [ФАЙЛ MAIN]
+    │       └── [ПАПКА TAGS]
+    ├── [ФАЙЛ LICENSE]
+    ├── [ФАЙЛ OS-TREE.TXT]
+        [СОДЕРЖИМОЕ]
+        Дерево файлов ОС DEER v0.0.1
+        Сгенерировано: 2025-10-12 23:20:55
+        ==================================================
+        
+        └── [ПАПКА .]
+            ├── [ПАПКА .GIT]
+            │   ├── [ФАЙЛ COMMIT_EDITMSG]
+            │   ├── [ФАЙЛ HEAD]
+            │   ├── [ФАЙЛ CONFIG]
+            │   ├── [ФАЙЛ DESCRIPTION]
+            │   ├── [ПАПКА HOOKS]
+            │   │   ├── [ФАЙЛ APPLYPATCH-MSG.SAMPLE]
+            │   │   ├── [ФАЙЛ COMMIT-MSG.SAMPLE]
+            │   │   ├── [ФАЙЛ FSMONITOR-WATCHMAN.SAMPLE]
+            │   │   ├── [ФАЙЛ POST-UPDATE.SAMPLE]
+            │   │   ├── [ФАЙЛ PRE-APPLYPATCH.SAMPLE]
+            │   │   ├── [ФАЙЛ PRE-COMMIT.SAMPLE]
+            │   │   ├── [ФАЙЛ PRE-MERGE-COMMIT.SAMPLE]
+            │   │   ├── [ФАЙЛ PRE-PUSH.SAMPLE]
+            │   │   ├── [ФАЙЛ PRE-REBASE.SAMPLE]
+            │   │   ├── [ФАЙЛ PRE-RECEIVE.SAMPLE]
+            │   │   ├── [ФАЙЛ PREPARE-COMMIT-MSG.SAMPLE]
+            │   │   ├── [ФАЙЛ PUSH-TO-CHECKOUT.SAMPLE]
+            │   │   ├── [ФАЙЛ SENDEMAIL-VALIDATE.SAMPLE]
+            │   │   └── [ФАЙЛ UPDATE.SAMPLE]
+            │   ├── [ФАЙЛ INDEX]
+            │   ├── [ПАПКА INFO]
+            │   │   └── [ФАЙЛ EXCLUDE]
+            │   ├── [ПАПКА LOGS]
+            │   │   ├── [ФАЙЛ HEAD]
+            │   │   └── [ПАПКА REFS]
+            │   │       ├── [ПАПКА HEADS]
+            │   │       │   └── [ФАЙЛ MAIN]
+            │   │       └── [ПАПКА REMOTES]
+            │   │           └── [ПАПКА ORIGIN]
+            │   │               ├── [ФАЙЛ HEAD]
+            │   │               └── [ФАЙЛ MAIN]
+            │   ├── [ПАПКА OBJECTS]
+            │   │   ├── [ПАПКА 0D]
+            │   │   │   └── [ФАЙЛ CD8031EC07243B099735B1488E251FF4105F15]
+            │   │   ├── [ПАПКА 11]
+            │   │   │   └── [ФАЙЛ 9E2E116762F8EE819E3C15163F79FA1E4D0718]
+            │   │   ├── [ПАПКА 13]
+            │   │   │   └── [ФАЙЛ 3E67C4AAEEAFA063AB8F2545BC0118DE74B6BB]
+            │   │   ├── [ПАПКА 28]
+            │   │   │   └── [ФАЙЛ 5C2A958557E8558326DFDBB4C3E7D136C23A6E]
+            │   │   ├── [ПАПКА 2D]
+            │   │   │   └── [ФАЙЛ 1915FF072A2873295A3C449EBA90A9A76F93C2]
+            │   │   ├── [ПАПКА 30]
+            │   │   │   └── [ФАЙЛ 53AE3D8086BAB1C016007DF507AFEB5D1F5CB4]
+            │   │   ├── [ПАПКА 31]
+            │   │   │   └── [ФАЙЛ F36717EDF5C428113FD55F55CCF31F13AE7867]
+            │   │   ├── [ПАПКА 39]
+            │   │   │   ├── [ФАЙЛ 86B225F55940C8D2E2BD4EDC751FB2411C7492]
+            │   │   │   └── [ФАЙЛ F4D9E8049AC08ED51A50B109FFB4AE2C5BBDA8]
+            │   │   ├── [ПАПКА 42]
+            │   │   │   └── [ФАЙЛ 173A4CDF6994CA9116E562B336CB3C63522A6C]
+            │   │   ├── [ПАПКА 48]
+            │   │   │   └── [ФАЙЛ 424126D77D6E4BC32652CBF932FAD1A55BC4C3]
+            │   │   ├── [ПАПКА 4C]
+            │   │   │   └── [ФАЙЛ 5F0F65087EAE276E5ABA78AF624D972CEEDCF2]
+            │   │   ├── [ПАПКА 4E]
+            │   │   │   └── [ФАЙЛ 4B95EBC2F79B4772312C280DB3304573D3E502]
+            │   │   ├── [ПАПКА 58]
+            │   │   │   └── [ФАЙЛ D429A72995AF6E4AEFA954C3A123933B9C701E]
+            │   │   ├── [ПАПКА 64]
+            │   │   │   ├── [ФАЙЛ 6D19EBB15DE2BF39213812553E66FDC6F04511]
+            │   │   │   └── [ФАЙЛ DFB1CF31913C9FAC466DAEE5CD4C9EFA66CDF6]
+            │   │   ├── [ПАПКА 6E]
+            │   │   │   └── [ФАЙЛ 5E054ED7440D825C58309C01BD7276B0B7721D]
+            │   │   ├── [ПАПКА 73]
+            │   │   │   ├── [ФАЙЛ AEE01A0A35CA53D2DA0A6BF68392B5D410265D]
+            │   │   │   └── [ФАЙЛ B0794A03A288BFD4F410F60C7B739520CFD259]
+            │   │   ├── [ПАПКА 77]
+            │   │   │   └── [ФАЙЛ 665465499637DD9AC32DFF3AE5D87EC41A07F3]
+            │   │   ├── [ПАПКА 7A]
+            │   │   │   └── [ФАЙЛ 652D0B4664025347B3689198846B846E494907]
+            │   │   ├── [ПАПКА 7D]
+            │   │   │   ├── [ФАЙЛ 674C45116307940935115510DFF2AAF447AD80]
+            │   │   │   └── [ФАЙЛ C3D592497E392F7EFA3F44967E1800D6814186]
+            │   │   ├── [ПАПКА 81]
+            │   │   │   └── [ФАЙЛ FFBEEFC5A16D209745DE1E38CC232652031AFB]
+            │   │   ├── [ПАПКА 89]
+            │   │   │   └── [ФАЙЛ FB50416827CEF10B9511ADD0A9940EB302FAB3]
+            │   │   ├── [ПАПКА 8A]
+            │   │   │   └── [ФАЙЛ 38129A7A6A34277D3D55EEF23F7D5B97EAD819]
+            │   │   ├── [ПАПКА 8E]
+            │   │   │   └── [ФАЙЛ C3570763D7F071064D2964AC576C45858DB9C1]
+            │   │   ├── [ПАПКА 9B]
+            │   │   │   └── [ФАЙЛ B8ABDE0B30F9445825C0C6A4D03541ABDD5CF3]
+            │   │   ├── [ПАПКА 9C]
+            │   │   │   └── [ФАЙЛ 8C6A99C5D3FE73051FA4A216768380AC97A82A]
+            │   │   ├── [ПАПКА 9F]
+            │   │   │   └── [ФАЙЛ 4C5DDFF09109B132FAD878F4831D957BD060BC]
+            │   │   ├── [ПАПКА B0]
+            │   │   │   └── [ФАЙЛ AB82D91157678B1E0D198503BCE57D07A5C53D]
+            │   │   ├── [ПАПКА BA]
+            │   │   │   └── [ФАЙЛ 941F954FCFC06A485AC49BCCC86A2B56B5A788]
+            │   │   ├── [ПАПКА BC]
+            │   │   │   └── [ФАЙЛ 3AF0B782A68DB507A37601A1A5755098ECB874]
+            │   │   ├── [ПАПКА BF]
+            │   │   │   └── [ФАЙЛ 2D44EB03A8973577157BD10B2C431DB2E85593]
+            │   │   ├── [ПАПКА C2]
+            │   │   │   └── [ФАЙЛ C7FE21356F7BEC0E61CF26A781B3DF0BC01385]
+            │   │   ├── [ПАПКА C6]
+            │   │   │   └── [ФАЙЛ 040AACDE79FA6DB6B8C22F79878FE3925CC58A]
+            │   │   ├── [ПАПКА CA]
+            │   │   │   └── [ФАЙЛ 3704FBD715E34372EEDBD20DFCC038AD377F24]
+            │   │   ├── [ПАПКА CF]
+            │   │   │   └── [ФАЙЛ 9B8CAE547445B5F0AEF4994C3CB89DB473358B]
+            │   │   ├── [ПАПКА D3]
+            │   │   │   └── [ФАЙЛ 4D65062ABA199CC19F7F02EF73A360957964AB]
+            │   │   ├── [ПАПКА D5]
+            │   │   │   └── [ФАЙЛ 884FFB4730642D05C9602B22FF40C46D1F23CD]
+            │   │   ├── [ПАПКА DC]
+            │   │   │   └── [ФАЙЛ F33E8286E80ED16086FFEAE97394A73E51618C]
+            │   │   ├── [ПАПКА E1]
+            │   │   │   └── [ФАЙЛ E8CC573E2414B520BEAF47451232DC0CD0F34F]
+            │   │   ├── [ПАПКА EB]
+            │   │   │   └── [ФАЙЛ 768362F2B62D669FA5E1457355C167F57FF846]
+            │   │   ├── [ПАПКА F8]
+            │   │   │   └── [ФАЙЛ D486D89AA5FAFFD314F73CDCF6FD91D053C6CB]
+            │   │   ├── [ПАПКА F9]
+            │   │   │   └── [ФАЙЛ 9CF9859A1DF2E316116CC480B2B8487DA97E8F]
+            │   │   ├── [ПАПКА FC]
+            │   │   │   └── [ФАЙЛ 37439AE199D3BAF910228690DAB3B54066CCCF]
+            │   │   ├── [ПАПКА FE]
+            │   │   │   └── [ФАЙЛ C658A67CFE0133C369D87F208C0EC9100FA45A]
+            │   │   ├── [ПАПКА INFO]
+            │   │   └── [ПАПКА PACK]
+            │   │       ├── [ФАЙЛ PACK-AC990E3E406515931E113641648246746FDF665A.IDX]
+            │   │       ├── [ФАЙЛ PACK-AC990E3E406515931E113641648246746FDF665A.PACK]
+            │   │       └── [ФАЙЛ PACK-AC990E3E406515931E113641648246746FDF665A.REV]
+            │   ├── [ФАЙЛ PACKED-REFS]
+            │   └── [ПАПКА REFS]
+            │       ├── [ПАПКА HEADS]
+            │       │   └── [ФАЙЛ MAIN]
+            │       ├── [ПАПКА REMOTES]
+            │       │   └── [ПАПКА ORIGIN]
+            │       │       ├── [ФАЙЛ HEAD]
+            │       │       └── [ФАЙЛ MAIN]
+    ├── [ПАПКА BIN]
+    │   ├── [ФАЙЛ DEER.BIN]
+    │   └── [ФАЙЛ DEER.ELF]
+    ├── [ПАПКА BUILD]
+    │   ├── [ФАЙЛ BOOT.O]
+    │   ├── [ФАЙЛ KERNEL.O]
+    │   └── [ФАЙЛ LONG_MODE_ENTRY.O]
+    ├── [ФАЙЛ BUILD.PY]
+    ├── [ПАПКА DEMO_ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251010-024730.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251010-024748.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251010-024834.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251010-024940.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251010-025155.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251010-025941.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251010-032130.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251010-032421.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251010-032511.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251010-032547.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251010-032634.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251010-032749.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251012-223149.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251012-223336.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251012-223434.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251012-223851.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251012-224411.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251012-224425.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251012-224818.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251012-225325.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251012-225406.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251012-225729.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251012-230010.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251012-230318.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251012-230450.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251012-231533.ISO]
+    │   ├── [ФАЙЛ DEER-V0.0.1-20251012-231553.ISO]
+    │   └── [ФАЙЛ DEER-V0.0.1-20251012-232055.ISO]
+    ├── [ПАПКА ISODIR]
+    │   └── [ПАПКА BOOT]
+    │       ├── [ФАЙЛ DEER.ELF]
+    │       └── [ПАПКА GRUB]
+    │           └── [ФАЙЛ GRUB.CFG]
+    ├── [ФАЙЛ OS_CONFIG.JSON]
+    └── [ПАПКА SRC]
+        ├── [ФАЙЛ GRUB.CFG]
+        ├── [ПАПКА INCLUDE]
+        ├── [ПАПКА KERNEL]
+        │   ├── [ФАЙЛ BOOT.S]
+        │       [СОДЕРЖИМОЕ]
+        │       # === MB2.S: Multiboot2 Header ===
+        │       .set	MAGIC, 0xE85250D6		# Multiboot2 magic number
+        │       .set	ARCH, 0				# Architecture: i386 (x86_64 совместим)
+        │       # CHECKSUM вычисляется автоматически
+        │       
+        │       .section .multiboot
+        │       .align 8
+        │       
+        │       mbh_start:
+        │       	.long	MAGIC
+        │       	.long	ARCH
+        │       	.long	mbh_end - mbh_start	# Header length
+        │       	.long	-(MAGIC + ARCH + (mbh_end - mbh_start))  # CHECKSUM
+        │       
+        │       	# Framebuffer request tag (type=5)
+        │       	.word	5					# type
+        │       	.word	20					# size
+        │       	.long	800					# width
+        │       	.long	600					# height
+        │       	.long	32					# depth (bits per pixel)
+        │       
+        │       	# End tag
+        │       	.word	0
+        │       	.word	0
+        │       	.long	8
+        │       mbh_end:
+        │       
+        │       
+        │       # === rodata: GDT и таблицы страниц ===
+        │       .section .rodata
+        │       .align 8
+        │       
+        │       gdt64:
+        │       	.quad	0						# Null segment
+        │       
+        │       gdt64_code_entry:
+        │       	.set	gdt64_code_seg, gdt64_code_entry - gdt64
+        │       	.quad	(1<<44) | (1<<47) | (1<<41) | (1<<43) | (1<<53)  # Code segment (64-bit)
+        │       
+        │       gdt64_data_entry:
+        │       	.set	gdt64_data_seg, gdt64_data_entry - gdt64
+        │       	.quad	(1<<44) | (1<<47) | (1<<41)                      # Data segment
+        │       
+        │       gdt64_pointer:
+        │       	.set	gdt64_limit, gdt64_pointer - gdt64 - 1
+        │       	.word	gdt64_limit
+        │       	.quad	gdt64
+        │       
+        │       
+        │       # === Точка входа ===
+        │       .global _start
+        │       .extern kernel_main
+        │       
+        │       .section .text
+        │       .code32
+        │       _start:
+        │           movl    $stack_top, %esp
+        │           # %eax = magic, %ebx = mb2_info_ptr
+        │       
+        │           call    check_multiboot
+        │           call    check_cpuid
+        │           call    check_long_mode
+        │           call    set_up_page_tables
+        │           call    enable_paging
+        │           call    set_up_SSE
+        │       
+        │           lgdt    gdt64_pointer
+        │       
+        │           movw    $gdt64_data_seg, %ax
+        │           movw    %ax, %ss
+        │           movw    %ax, %ds
+        │           movw    %ax, %es
+        │       
+        │           # Переход в 64-битный режим
+        │           ljmp    $gdt64_code_seg, $kernel_main64_entry
+        │       
+        │       
+        │       # === Точка входа в 64-битный код ===
+        │       .code64
+        │       kernel_main64_entry:
+        │           # Очистка сегментных регистров
+        │           movw    $0, %ax
+        │           movw    %ax, %ds
+        │           movw    %ax, %es
+        │           movw    %ax, %ss
+        │       
+        │           # Передача аргументов в соответствии с System V ABI:
+        │           # rdi = magic, rsi = mb2_info_ptr
+        │           movl    %eax, %edi        # magic → rdi
+        │           movl    %ebx, %esi        # mb2_info_ptr → rsi
+        │       
+        │           call    kernel_main
+        │       
+        │           # Зацикливаемся
+        │           hlt
+        │           jmp     .
+        │       
+        │       
+        │       # === Вспомогательные функции (32-bit) ===
+        │       .code32
+        │       
+        │       set_up_page_tables:
+        │           # Настройка 4 уровня пейджинга (P4 -> P3 -> P2)
+        │           movl    $p4_table, %eax
+        │           orl     $0b11, %eax              # present + writable
+        │           movl    %eax, p4_table + 511 * 8 # P4[511] = адрес P4 (рекурсивная запись)
+        │       
+        │           movl    $p3_table, %eax
+        │           orl     $0b11, %eax
+        │           movl    %eax, p4_table           # P4[0] = P3
+        │       
+        │           movl    $p2_table, %eax
+        │           orl     $0b11, %eax
+        │           movl    %eax, p3_table           # P3[0] = P2
+        │       
+        │           # Маппим 2048 страниц по 2MB = 4 ГБ
+        │           movl    $0, %ecx
+        │       map_p2_table:
+        │           movl    $0x200000, %eax          # 2MB
+        │           mull    %ecx                     # eax = ecx * 0x200000
+        │           orl     $0b10000011, %eax        # present + writable + huge page
+        │           movl    %eax, p2_table(,%ecx,8)  # P2[ecx] = entry
+        │           incl    %ecx
+        │           cmpl    $2048, %ecx              # 2048 * 2MB = 4 GB
+        │           jne     map_p2_table
+        │       
+        │           ret
+        │       
+        │       
+        │       enable_paging:
+        │           movl    $p4_table, %eax
+        │           movl    %eax, %cr3               # CR3 = физический адрес P4
+        │       
+        │           movl    %cr4, %eax
+        │           orl     $1 << 5, %eax            # Включаем PAE
+        │           movl    %eax, %cr4
+        │       
+        │           movl    $0xC0000080, %ecx        # EFER MSR
+        │           rdmsr
+        │           orl     $1 << 8, %eax            # Устанавливаем LME (Long Mode Enable)
+        │           wrmsr
+        │       
+        │           movl    %cr0, %eax
+        │           orl     $1 << 31, %eax           # Включаем paging (PG bit)
+        │           movl    %eax, %cr0
+        │       
+        │           ret
+        │       
+        │       
+        │       set_up_SSE:
+        │           movl    $0x1, %eax
+        │           cpuid
+        │           testl   $1<<25, %edx             # Поддерживает ли SSE?
+        │           jz      no_SSE
+        │       
+        │           movl    %cr0, %eax
+        │           andl    $0xFFFB, %eax            # Clear EM (CR0.EM)
+        │           orl     $0x2, %eax               # Set MP (CR0.MP)
+        │           movl    %eax, %cr0
+        │       
+        │           movl    %cr4, %eax
+        │           orl     $3 << 9, %eax            # Set OSFXSR and OSXMMEXCPT
+        │           movl    %eax, %cr4
+        │       
+        │           ret
+        │       
+        │       
+        │       # === Проверки запуска ===
+        │       
+        │       check_multiboot:
+        │           cmpl    $0x36d76289, %eax
+        │           jne     no_multiboot
+        │           ret
+        │       
+        │       no_multiboot:
+        │           movb    $'0', %al
+        │           jmp     error
+        │       
+        │       check_cpuid:
+        │           pushfl
+        │           popl    %eax
+        │           movl    %eax, %ecx
+        │           xorl    $1 << 21, %eax
+        │           pushl   %eax
+        │           popfl
+        │           pushfl
+        │           popl    %eax
+        │           pushl   %ecx
+        │           popfl
+        │           xorl    %ecx, %eax
+        │           jz      no_cpuid
+        │           ret
+        │       
+        │       no_cpuid:
+        │           movb    $'1', %al
+        │           jmp     error
+        │       
+        │       check_long_mode:
+        │           movl    $0x80000000, %eax
+        │           cpuid
+        │           cmpl    $0x80000001, %eax
+        │           jb      no_long_mode
+        │           movl    $0x80000001, %eax
+        │           cpuid
+        │           testl   $1 << 29, %edx
+        │           jz      no_long_mode
+        │           ret
+        │       
+        │       no_long_mode:
+        │           movb    $'2', %al
+        │           jmp     error
+        │       
+        │       no_SSE:
+        │           movb    $'a', %al
+        │           jmp     error
+        │       
+        │       error:
+        │           movl    $0x4f524f45, 0xb8000     # "ERRO"
+        │           movl    $0x4f3a4f52, 0xb8004     # "RO:"
+        │           movl    $0x4f204f20, 0xb8008     # "  "
+        │           movb    %al, 0xb800a             # Код ошибки
+        │           hlt
+        │       
+        │       
+        │       # === Секция BSS ===
+        │       .section .bss
+        │       .align 4096
+        │       
+        │       p4_table:
+        │           .skip 4096
+        │       p3_table:
+        │           .skip 4096
+        │       p2_table:
+        │           .skip 4096 * 4   # 16 KB для 2048 записей
+        │       
+        │       stack_bottom:
+        │           .skip 4096 * 2
+        │       stack_top:
+        │   ├── [ФАЙЛ KERNEL.C]
+        │       [СОДЕРЖИМОЕ]
+        │       #include <stdint.h>
+        │       
+        │       // === VGA Text Mode (на случай ошибок) ===
+        │       static int vga_col = 0;
+        │       static int vga_row = 0;
+        │       
+        │       #define VGA_WIDTH 80
+        │       #define VGA_HEIGHT 25
+        │       #define VGA_ADDRESS 0xB8000
+        │       
+        │       #define WHITE_ON_BLACK 0x0F
+        │       #define RED_ON_BLACK   0x0C
+        │       #define GREEN_ON_BLACK 0x0A
+        │       #define BLUE_ON_BLACK  0x09
+        │       #define YELLOW_ON_BLACK 0x0E
+        │       
+        │       void itoa(uint64_t n, char* buf) {
+        │           if (n == 0) {
+        │               buf[0] = '0';
+        │               buf[1] = '\0';
+        │               return;
+        │           }
+        │           int i = 0;
+        │           while (n > 0) {
+        │               buf[i++] = '0' + (n % 10);
+        │               n /= 10;
+        │           }
+        │           buf[i] = '\0';
+        │           for (int j = 0; j < i / 2; j++) {
+        │               char tmp = buf[j];
+        │               buf[j] = buf[i - 1 - j];
+        │               buf[i - 1 - j] = tmp;
+        │           }
+        │       }
+        │       
+        │       void vga_putentryat(char c, uint8_t color, int col, int row) {
+        │           volatile uint16_t* vga = (uint16_t*)VGA_ADDRESS;
+        │           int index = row * VGA_WIDTH + col;
+        │           vga[index] = (uint16_t)(c | (color << 8));
+        │       }
+        │       
+        │       void vga_scroll() {
+        │           volatile uint16_t* vga = (uint16_t*)VGA_ADDRESS;
+        │           if (vga_row >= VGA_HEIGHT) {
+        │               for (int i = 0; i < (VGA_HEIGHT - 1) * VGA_WIDTH; i++) {
+        │                   vga[i] = vga[i + VGA_WIDTH];
+        │               }
+        │               for (int i = (VGA_HEIGHT - 1) * VGA_WIDTH; i < VGA_HEIGHT * VGA_WIDTH; i++) {
+        │                   vga[i] = ' ' | (WHITE_ON_BLACK << 8);
+        │               }
+        │               vga_row = VGA_HEIGHT - 1;
+        │           }
+        │       }
+        │       
+        │       void vga_writex(const char* str, uint8_t color) {
+        │           while (*str) {
+        │               if (*str == '\n') {
+        │                   vga_row++;
+        │                   vga_col = 0;
+        │               } else {
+        │                   vga_putentryat(*str, color, vga_col, vga_row);
+        │                   vga_col++;
+        │                   if (vga_col >= VGA_WIDTH) {
+        │                       vga_col = 0;
+        │                       vga_row++;
+        │                   }
+        │               }
+        │               str++;
+        │               vga_scroll();
+        │           }
+        │       }
+        │       
+        │       void vga_write(const char* str) {
+        │           vga_writex(str, WHITE_ON_BLACK);
+        │       }
+        │       
+        │       void vga_error(const char* str) {
+        │           vga_writex(str, RED_ON_BLACK);
+        │       }
+        │       
+        │       void vga_success(const char* str) {
+        │           vga_writex(str, GREEN_ON_BLACK);
+        │       }
+        │       
+        │       // === Multiboot2 structures ===
+        │       struct mb2_tag {
+        │           uint32_t type;
+        │           uint32_t size;
+        │       };
+        │       
+        │       struct mb2_tag_framebuffer {
+        │           uint32_t type;
+        │           uint32_t size;
+        │           uint64_t addr;
+        │           uint32_t pitch;
+        │           uint32_t width;
+        │           uint32_t height;
+        │           uint8_t bpp;
+        │           uint8_t red_field_pos;
+        │           uint8_t red_mask_size;
+        │           uint8_t green_field_pos;
+        │           uint8_t green_mask_size;
+        │           uint8_t blue_field_pos;
+        │           uint8_t blue_mask_size;
+        │           uint8_t unused;
+        │       };
+        │       
+        │       #define MB2_TAG_FRAMEBUFFER 8
+        │       
+        │       // === Ядро ===
+        │       void kernel_main(uint32_t magic, void* mb2_info_ptr) {
+        │           // Очистка VGA
+        │           volatile uint16_t* vga = (uint16_t*)VGA_ADDRESS;
+        │           for (int i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++) {
+        │               vga[i] = ' ' | (WHITE_ON_BLACK << 8);
+        │           }
+        │       
+        │           if (magic != 0x36d76289) {
+        │               vga_error("Invalid Multiboot2 magic!\n");
+        │               while(1);
+        │           }
+        │       
+        │           vga_success("DEER OS v0.0.1\n");
+        │           vga_write("====================\n");
+        │       
+        │           // Пропускаем первые 8 байт (total_size + reserved)
+        │           struct mb2_tag* tag = (struct mb2_tag*)((uint8_t*)mb2_info_ptr + 8);
+        │           struct mb2_tag_framebuffer* fb_tag = 0;
+        │       
+        │           while (tag->type != 0) {
+        │               if (tag->type == MB2_TAG_FRAMEBUFFER) {
+        │                   fb_tag = (struct mb2_tag_framebuffer*)tag;
+        │                   break;
+        │               }
+        │               // Выравнивание на 8 байт
+        │               uint32_t size = (tag->size + 7) & ~7;
+        │               tag = (struct mb2_tag*)((uint8_t*)tag + size);
+        │           }
+        │       
+        │           if (!fb_tag) {
+        │               vga_error("Framebuffer not provided!\n");
+        │               while(1);
+        │           }
+        │       
+        │           vga_success("Framebuffer OK!\n");
+        │           char buf[32];
+        │           itoa(fb_tag->width, buf); vga_write("Width: "); vga_write(buf); vga_write("\n");
+        │           itoa(fb_tag->height, buf); vga_write("Height: "); vga_write(buf); vga_write("\n");
+        │           itoa(fb_tag->bpp, buf); vga_write("BPP: "); vga_write(buf); vga_write("\n");
+        │       
+        │           if (fb_tag->bpp != 32) {
+        │               vga_error("Only 32-bit framebuffer supported!\n");
+        │               while(1);
+        │           }
+        │       
+        │           uint32_t* fb = (uint32_t*)(uintptr_t)fb_tag->addr;
+        │           uint32_t pitch = fb_tag->pitch / 4; // pixels per scanline
+        │           uint32_t width = fb_tag->width;
+        │           uint32_t height = fb_tag->height;
+        │       
+        │           // Очистка экрана в чёрный
+        │           for (uint32_t y = 0; y < height; y++) {
+        │               for (uint32_t x = 0; x < width; x++) {
+        │                   fb[y * pitch + x] = 0x00000000;
+        │               }
+        │           }
+        │       
+        │           // Синий квадрат 100x100 по центру
+        │           uint32_t sq = 100;
+        │           uint32_t cx = width / 2 - sq / 2;
+        │           uint32_t cy = height / 2 - sq / 2;
+        │       
+        │           for (uint32_t y = cy; y < cy + sq; y++) {
+        │               for (uint32_t x = cx; x < cx + sq; x++) {
+        │                   if (x < width && y < height) {
+        │                       // BGRA8888: Blue = 0xFF000000
+        │                       fb[y * pitch + x] = 0xFF000000;
+        │                   }
+        │               }
+        │           }
+        │       
+        │           vga_success("Blue square drawn!\n");
+        │           while(1);
+        │       }
+        │   └── [ФАЙЛ LINK.LD]
+        │       [СОДЕРЖИМОЕ]
+        │       ENTRY(_start)
+        │       
+        │       SECTIONS {
+        │           . = 0x100000;
+        │       
+        │           .boot BLOCK(4K) : ALIGN(4K) {
+        │               KEEP(*(.multiboot))
+        │           }
+        │       
+        │           .text : ALIGN(4K) {
+        │               *(.text*)
+        │           }
+        │       
+        │           .rodata : ALIGN(4K) {
+        │               *(.rodata*)
+        │           }
+        │       
+        │           .data : ALIGN(4K) {
+        │               *(.data)
+        │           }
+        │       
+        │           .bss : ALIGN(4K) {
+        │               *(.bss)
+        │               *(COMMON)
+        │           } =0
+        │       }
+        └── [ПАПКА LIBC]
+            └── [ПАПКА INCLUDE]
+                └── [ФАЙЛ STDINT.H]
+                    [СОДЕРЖИМОЕ]
+                    // libc/include/stdint.h
+                    #ifndef STDINT_H
+                    #define STDINT_H
+                    
+                    typedef signed char int8_t;
+                    typedef unsigned char uint8_t;
+                    typedef short int16_t;
+                    typedef unsigned short uint16_t;
+                    typedef int int32_t;
+                    typedef unsigned int uint32_t;
+                    typedef long long int64_t;
+                    typedef unsigned long long uint64_t;
+                    
+                    #endif
