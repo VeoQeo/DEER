@@ -1,0 +1,20 @@
+{
+    "NAME": "DEER",
+    "VERSION": "0.0.1",
+    "AUTHOR": "VeoQeo",
+    "DESCRIPTION": "A 64-bit OS",
+    "ARCH": "x86_64",
+    "TARGET": "x86_64-elf",
+    "CFLAGS": "-ffreestanding -O2 -Wall -Wextra -std=gnu11 -mno-red-zone -fno-stack-protector -fno-pic",
+    "LDFLAGS": "-nostdlib",
+    "QEMU_MEMORY": "512M",
+    "QEMU_AUDIO": false,
+    "QEMU_SERIAL": true,
+    "QEMU_CLEAN_AFTER_RUN": false,
+    "GRUB_TIMEOUT": 0,
+    "GRUB_DEFAULT": 0,
+    "GRUB_MENU_COLORS": {
+        "normal": "white/black",
+        "highlight": "black/light-gray"
+    }
+}
