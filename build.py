@@ -21,10 +21,10 @@ import shutil
 import time
 import json
 from datetime import datetime
-from typing import List, Dict, Optional, Tuple
+from typing import List
 from enum import Enum, auto
-import readline
 import glob
+import zipfile
 
 # === 🔧 Константы: имена ключевых файлов (базовые, БЕЗ жёсткого имени ОС) ===
 KERNEL_SRC = 'kernel.c'
@@ -281,7 +281,7 @@ class BuildSystem:
         Path(path).mkdir(parents=True, exist_ok=True)
         self.config.log(f"Директория {path} создана/проверена", LogLevel.DEBUG)
 
-    def find_sources(self, extensions: Tuple[str, ...] = ('.c', '.S', '.asm')) -> List[str]:
+    def find_sources(self, extensions: tuple[str, ...] = ('.c', '.S', '.asm')) -> List[str]:
         sources = []
         exclude_files = {BOOT_ASM}
 
@@ -357,38 +357,37 @@ class BuildSystem:
         except subprocess.CalledProcessError as e:
             self.config.log(f"Ошибка создания .bin: {e}", LogLevel.ERROR)
             sys.exit(1)
-            
+
     def create_grub_cfg(self, grub_cfg_path: str) -> None:
-        """
-        Создаёт стандартный grub.cfg, ТОЛЬКО если он не существует.
-        Это позволяет пользователю редактировать свой собственный конфиг.
-        """
+        should_create = True
         if os.path.exists(grub_cfg_path):
-            self.config.log(f"Используется существующий GRUB конфиг: {grub_cfg_path}", LogLevel.INFO)
+            try:
+                with open(grub_cfg_path, 'r') as f:
+                    content = f.read()
+                    timeout_match = f'timeout={self.config.GRUB_TIMEOUT}' in content
+                    default_match = f'default={self.config.GRUB_DEFAULT}' in content
+                    menuentry_match = f'menuentry "{self.config.NAME} OS v{self.config.VERSION}"' in content
+                    if timeout_match and default_match and menuentry_match:
+                        should_create = False
+            except Exception:
+                pass
+
+        if not should_create:
             return
 
-        # Если файла нет — создаём шаблон по умолчанию
         grub_content = f"""
-    # === GRUB CONFIG FOR {self.config.NAME.upper()} ===
-    # Этот файл был создан автоматически.
-    # Теперь вы можете отредактировать его вручную.
-    # Следующие сборки будут использовать эту версию.
-
-    timeout={self.config.GRUB_TIMEOUT}
-    default={self.config.GRUB_DEFAULT}
-
-    menuentry "{self.config.NAME} OS v{self.config.VERSION}" {{
-        multiboot2 /boot/{self.config.ELF_KERNEL}
-        boot
-    }}
-    """
-
+timeout={self.config.GRUB_TIMEOUT}
+default={self.config.GRUB_DEFAULT}
+menuentry "{self.config.NAME} OS v{self.config.VERSION}" {{
+    multiboot2 /boot/{self.config.ELF_KERNEL}
+    boot
+}}
+"""
         try:
             self.ensure_dir(os.path.dirname(grub_cfg_path))
             with open(grub_cfg_path, 'w') as f:
-                f.write(grub_content.strip() + '\n')
-            self.config.log(f"✅ Создан стандартный GRUB конфиг: {grub_cfg_path}", LogLevel.INFO)
-            self.config.log(f"💡 Теперь вы можете отредактировать его вручную!", LogLevel.INFO)
+                f.write(grub_content.strip())
+            self.config.log(f"Создан/обновлён GRUB конфиг: {grub_cfg_path}", LogLevel.INFO)
         except Exception as e:
             self.config.log(f"Ошибка создания grub.cfg: {e}", LogLevel.ERROR)
             sys.exit(1)
@@ -400,15 +399,13 @@ class BuildSystem:
         self.ensure_dir(boot_dir)
         self.ensure_dir(grub_dir)
 
-        # Копируем .efi (ELF) вместо .bin
         kernel_elf = self.config.get_kernel_output()
         if not os.path.exists(kernel_elf):
             self.config.log(f"Фатально: ELF ядро не найдено: {kernel_elf}", LogLevel.CRITICAL)
             sys.exit(1)
 
-        shutil.copy(kernel_elf, f"{boot_dir}/{self.config.ELF_KERNEL}")  # deer.efi
+        shutil.copy(kernel_elf, f"{boot_dir}/{self.config.ELF_KERNEL}")
 
-        # Копируем grub.cfg
         shutil.copy(grub_cfg_src, f"{grub_dir}/{GRUB_CONFIG}")
 
         self.config.log(f"Создание ISO: {iso_image}", LogLevel.INFO)
@@ -462,7 +459,7 @@ class BuildSystem:
             if clean_after:
                 self.clean()
 
-    def generate_file_tree(self, path: str = '.', indent: str = '', last: bool = True, output_file=None) -> None:
+    def generate_file_tree(self, path: str = '.', indent: str = '', last: bool = True, output_file=None, mode: str = 'full') -> None:
         prefix = indent + ('└── ' if last else '├── ')
         name = os.path.basename(path)
 
@@ -476,32 +473,39 @@ class BuildSystem:
             for i, item in enumerate(items):
                 is_last = i == len(items) - 1
                 new_indent = indent + ('    ' if last else '│   ')
-                self.generate_file_tree(os.path.join(path, item), new_indent, is_last, output_file)
+                self.generate_file_tree(
+                    os.path.join(path, item),
+                    new_indent,
+                    is_last,
+                    output_file,
+                    mode
+                )
 
-                file_path = os.path.join(path, item)
-                if os.path.isfile(file_path) and item.endswith(('.c', '.h', '.ld', '.S', '.txt')):
-                    try:
-                        with open(file_path, 'r', encoding='utf-8') as f:
-                            content = f.read().strip()
-                            if content:
-                                output_file.write(f"{new_indent}    [СОДЕРЖИМОЕ]\n")
-                                for line in content.split('\n'):
-                                    output_file.write(f"{new_indent}    {line}\n")
-                    except Exception as e:
-                        output_file.write(f"{new_indent}    [ОШИБКА ЧТЕНИЯ ФАЙЛА: {str(e)}]\n")
+                if mode == 'full' and os.path.isfile(os.path.join(path, item)):
+                    file_path = os.path.join(path, item)
+                    if file_path.endswith(('.c', '.h', '.ld', '.S', '.txt')):
+                        try:
+                            with open(file_path, 'r', encoding='utf-8') as f:
+                                content = f.read().strip()
+                                if content:
+                                    output_file.write(f"{new_indent}    [СОДЕРЖИМОЕ]\n")
+                                    for line in content.split('\n'):
+                                        output_file.write(f"{new_indent}    {line}\n")
+                        except Exception as e:
+                            output_file.write(f"{new_indent}    [ОШИБКА ЧТЕНИЯ ФАЙЛА: {str(e)}]\n")
 
-    def save_file_tree(self) -> None:
+    def save_file_tree(self, mode: str = 'full') -> None:
         tree_file = self.config.TREE_FILE
-        self.config.log(f"Сохранение дерева файлов в {tree_file}", LogLevel.INFO)
+        self.config.log(f"Сохранение дерева файлов ({mode}) в {tree_file}", LogLevel.INFO)
         with open(tree_file, 'w', encoding='utf-8') as f:
             f.write(f"Дерево файлов ОС {self.config.NAME} v{self.config.VERSION}\n")
             f.write(f"Сгенерировано: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
             f.write("=" * 50 + "\n\n")
-            self.generate_file_tree(output_file=f)
+            self.generate_file_tree(output_file=f, mode=mode)
         self.config.log(f"Дерево файлов успешно сохранено в {tree_file}", LogLevel.INFO)
 
-    def print_file_tree(self) -> None:
-        self.save_file_tree()
+    def print_file_tree(self, mode: str = 'full') -> None:
+        self.save_file_tree(mode=mode)
         with open(self.config.TREE_FILE, 'r', encoding='utf-8') as f:
             print(f.read())
 
@@ -524,6 +528,37 @@ class BuildSystem:
                 os.remove(file_pattern)
                 self.config.log(f"Удален файл: {file_pattern}", LogLevel.DEBUG)
 
+    def clean_demo_iso(self) -> None:
+        demo_dir = self.config.DEMO_ISO_DIR
+        if os.path.exists(demo_dir):
+            shutil.rmtree(demo_dir)
+            self.config.log(f"Папка удалена: {demo_dir}", LogLevel.INFO)
+        else:
+            self.config.log(f"Папка не существует: {demo_dir}", LogLevel.WARNING)
+
+    def archive_source_code(self, archive_format: str = 'zip') -> None:
+        archive_name = f"{self.config.DEMO_ISO_DIR}/{self.config.NAME.lower()}-src-v{self.config.VERSION}.zip"
+        self.config.log(f"Создание архива исходников: {archive_name}", LogLevel.INFO)
+
+        try:
+            with zipfile.ZipFile(archive_name, 'w', zipfile.ZIP_DEFLATED) as zf:
+                for root, dirs, files in os.walk('src'):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        arcname = os.path.relpath(file_path, '.')
+                        zf.write(file_path, arcname)
+                        self.config.log(f"Добавлен в архив: {arcname}", LogLevel.DEBUG)
+
+                for file in ['os_config.json', 'OS-TREE.txt', 'build.py', 'LICENSE']:
+                    if os.path.exists(file):
+                        zf.write(file, file)
+                        self.config.log(f"Добавлен в архив: {file}", LogLevel.DEBUG)
+
+            self.config.log(f"Архив исходников создан: {archive_name}", LogLevel.INFO)
+        except Exception as e:
+            self.config.log(f"Ошибка при создании архива: {e}", LogLevel.ERROR)
+            sys.exit(1)
+            
     def check_tools(self) -> None:
         required_tools = [
             self.config.CC,
@@ -566,7 +601,6 @@ class BuildSystem:
             sources = self.find_sources()
             objects = self.compile_sources(sources, self.config.BUILD_DIR)
             
-            # === Компиляция ОДНОГО boot.s (с встроенным mb2) ===
             boot_src = f"src/kernel/{BOOT_ASM}"
             obj = os.path.join(self.config.BUILD_DIR, "boot.o")
 
@@ -581,7 +615,7 @@ class BuildSystem:
             self.config.log(f"Компиляция: {boot_src}", LogLevel.INFO)
             try:
                 subprocess.run(cmd, shell=True, check=True)
-                objects.insert(0, obj)  # Должен быть первым!
+                objects.insert(0, obj)
             except subprocess.CalledProcessError as e:
                 self.config.log(f"Ошибка компиляции boot.s: {e}", LogLevel.ERROR)
                 sys.exit(1)
@@ -612,7 +646,7 @@ class BuildSystem:
                 shutil.copy(iso_path, demo_iso)
                 self.config.log(f"ISO сохранен как: {demo_iso}", LogLevel.INFO)
             
-            self.save_file_tree()
+            self.save_file_tree(mode='full')
             
             build_time = time.time() - self.start_time
             self.config.log(f"Сборка завершена за {build_time:.2f} секунд", LogLevel.INFO)
@@ -633,24 +667,21 @@ def main() -> None:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument('--clean', action='store_true', help='Очистить артефакты сборки')
+    parser.add_argument('--clean-demo', action='store_true', help='Удалить папку demo_iso')
     parser.add_argument('--run', action='store_true', help='Собрать и запустить в QEMU')
     parser.add_argument('--debug', action='store_true', help='Сборка с отладочными символами')
-    parser.add_argument('--demo', action='store_true', 
-                       help='Создать версионный ISO в папке demo_iso')
+    parser.add_argument('--demo', action='store_true', help='Создать версионный ISO в папке demo_iso')
+    parser.add_argument('--archive-src', choices=['zip'], help='Создать архив с исходным кодом (zip)')
+    parser.add_argument('--git', action='store_true', help='Подготовить папку public/ для публикации в Git')
     parser.add_argument('--name', type=str, help='Установить имя ОС')
     parser.add_argument('--version', type=str, help='Установить версию ОС')
     parser.add_argument('--author', type=str, help='Установить автора ОС')
     parser.add_argument('--description', type=str, help='Установить описание ОС')
-    parser.add_argument('--save-config', action='store_true', 
-                       help='Сохранить текущую конфигурацию')
-    parser.add_argument('--edit-config', action='store_true', 
-                       help='Интерактивное редактирование конфигурации')
-    parser.add_argument('--clean-after-run', action='store_true', 
-                       help='Очистить артефакты после запуска QEMU')
-    parser.add_argument('--gdb', action='store_true', 
-                       help='Запустить QEMU в режиме отладки GDB')
-    parser.add_argument('--tree', action='store_true', 
-                       help='Показать дерево файлов и папок ОС и сохранить в файл')
+    parser.add_argument('--save-config', action='store_true', help='Сохранить текущую конфигурацию')
+    parser.add_argument('--edit-config', action='store_true', help='Интерактивное редактирование конфигурации')
+    parser.add_argument('--clean-after-run', action='store_true', help='Очистить артефакты после запуска QEMU')
+    parser.add_argument('--gdb', action='store_true', help='Запустить QEMU в режиме отладки GDB')
+    parser.add_argument('--tree', nargs='?', const='full', choices=['full', 'no-content'], help='Показать дерево файлов: full (с содержимым) или no-content (только структура)')
     parser.add_argument('--grub-timeout', type=int, help='Таймаут меню GRUB в секундах')
     parser.add_argument('--grub-default', type=int, help='Номер пункта меню по умолчанию')
     parser.add_argument('--no-grub-menu', action='store_true', help='Отключить меню GRUB (мгновенный запуск)')
@@ -714,14 +745,28 @@ def main() -> None:
     
     builder = BuildSystem(config)
     
-    if args.tree:
-        builder.print_file_tree()
+    if args.tree is not None:
+        builder.print_file_tree(mode=args.tree)
         return
-    
+
     if args.clean:
         builder.clean()
         return
-    
+        
+    if args.clean_demo:
+        builder.clean_demo_iso()
+        return
+
+    if args.archive_src:
+        builder.build(debug=args.debug, versioned_iso=True)
+        builder.archive_source_code(archive_format=args.archive_src)
+        return
+
+    if args.git:
+        builder.build(debug=args.debug, versioned_iso=True)
+        builder.prepare_git_public()
+        return
+
     builder.build(
         debug=args.debug,
         versioned_iso=args.demo or args.run

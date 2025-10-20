@@ -4,7 +4,7 @@ SECTIONS {
     . = 0x100000;
 
     .boot BLOCK(4K) : ALIGN(4K) {
-        KEEP(*(.multiboot))
+        KEEP(*(.multiboot_header))
     }
 
     .text : ALIGN(4K) {
@@ -22,5 +22,5 @@ SECTIONS {
     .bss : ALIGN(4K) {
         *(.bss)
         *(COMMON)
-    } =0
+    } = 0
 }
