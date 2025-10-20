@@ -558,7 +558,7 @@ menuentry "{self.config.NAME} OS v{self.config.VERSION}" {{
         except Exception as e:
             self.config.log(f"Ошибка при создании архива: {e}", LogLevel.ERROR)
             sys.exit(1)
-            
+
     def check_tools(self) -> None:
         required_tools = [
             self.config.CC,
@@ -672,7 +672,6 @@ def main() -> None:
     parser.add_argument('--debug', action='store_true', help='Сборка с отладочными символами')
     parser.add_argument('--demo', action='store_true', help='Создать версионный ISO в папке demo_iso')
     parser.add_argument('--archive-src', choices=['zip'], help='Создать архив с исходным кодом (zip)')
-    parser.add_argument('--git', action='store_true', help='Подготовить папку public/ для публикации в Git')
     parser.add_argument('--name', type=str, help='Установить имя ОС')
     parser.add_argument('--version', type=str, help='Установить версию ОС')
     parser.add_argument('--author', type=str, help='Установить автора ОС')
@@ -760,11 +759,6 @@ def main() -> None:
     if args.archive_src:
         builder.build(debug=args.debug, versioned_iso=True)
         builder.archive_source_code(archive_format=args.archive_src)
-        return
-
-    if args.git:
-        builder.build(debug=args.debug, versioned_iso=True)
-        builder.prepare_git_public()
         return
 
     builder.build(
