@@ -5,6 +5,8 @@ import sys
 import subprocess
 import argparse
 from pathlib import Path
+import json
+import time
 
 
 def run(cmd, check=True, shell=False, cwd=None):
@@ -15,24 +17,41 @@ def run(cmd, check=True, shell=False, cwd=None):
 
 
 class Builder:
-    def __init__(self):
+    def __init__(self, name=None, version=None):
+        self.ensure_config()  # ← Добавлено
+
         self.ARCH = "x86_64"
         self.OUTPUT = "kernel"
-        self.IMAGE_NAME = f"deer-v0.0.1"
         self.KERNEL_DIR = Path("kernel")
         self.BUILD_DIR = self.KERNEL_DIR / f"bin-{self.ARCH}"
         self.OBJ_DIR = self.KERNEL_DIR / f"obj-{self.ARCH}"
         self.LINKER_SCRIPT = self.KERNEL_DIR / "linker-scripts" / f"{self.ARCH}.lds"
 
-        self.LIMINE_DIR = Path("limine")
-        self.OVMF_DIR = Path("ovmf")
+        TOOLS_DIR = Path("limine-tools")
+        self.LIMINE_DIR = TOOLS_DIR / "limine"
+        self.OVMF_DIR = TOOLS_DIR / "ovmf"
         self.OVMF_FILE = self.OVMF_DIR / f"ovmf-code-{self.ARCH}.fd"
 
         self.ISO_DIR = Path("iso_root")
-        self.ISO_FILE = Path(f"{self.IMAGE_NAME}.iso")
-        self.HDD_FILE = Path(f"{self.IMAGE_NAME}.hdd")
+        self.ISO_FILE = Path("deer-v0.0.1.iso")
+        self.HDD_FILE = Path("deer-v0.0.1.hdd")
 
         self.QEMU = f"qemu-system-{self.ARCH}"
+
+        # Загружаем конфиг
+        with open("os-config.json", 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        self.OS_NAME = name or config.get("name", "DEER")
+        self.OS_VERSION = version or config.get("version", "v0.0.1")
+
+        # Генерация имени ISO
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        safe_name = "".join(c for c in self.OS_NAME if c.isalnum() or c in "._-")
+        safe_version = "".join(c for c in self.OS_VERSION if c.isalnum() or c in "._-")
+        self.FINAL_ISO_NAME = f"{safe_name}.{safe_version}-{timestamp}.iso"
+
+        self.DEMO_ISO_DIR = Path("demo_iso")
+        self.DEMO_ISO_DIR.mkdir(exist_ok=True)
 
     def clean(self):
         """Очистить временные файлы сборки и ISO."""
@@ -58,10 +77,9 @@ class Builder:
     def distclean(self):
         """Полная очистка: включая зависимости."""
         self.clean()
-        if self.LIMINE_DIR.exists():
-            run(["rm", "-rf", str(self.LIMINE_DIR)])
-        if self.OVMF_DIR.exists():
-            run(["rm", "-rf", str(self.OVMF_DIR)])
+        tools_dir = Path("limine-tools")
+        if tools_dir.exists():
+            run(["rm", "-rf", str(tools_dir)])
         deps_flag = self.KERNEL_DIR / ".deps-obtained"
         if deps_flag.exists():
             deps_flag.unlink()
@@ -73,10 +91,106 @@ class Builder:
             print("[!] Зависимости не установлены. Запускаем get-deps...")
             run(["./get-deps"], cwd=str(self.KERNEL_DIR))
             deps_flag.touch()
+    
+    def ensure_config(self):
+        """Создаёт os-config.json, если он не существует."""
+        config_path = Path("os-config.json")
+        if config_path.exists():
+            return
+
+        print(f"[*] Создание конфигурационного файла {config_path}...")
+
+        config_data = {
+            "name": "DEER",
+            "version": "v0.0.1",
+            "description": "A 64-bit operating system for extreme conditions.",
+            "author": "VeoQeo",
+            "arch": "x86_64",
+            "bootloader": "limine",
+            "website": None,
+            "license": "MIT"
+        }
+
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(config_data, f, indent=4, ensure_ascii=False)
+
+        print(f"[OK] Конфигурация сохранена в {config_path}")
+
+    def ensure_linker_scripts(self):
+        """Создаёт папку linker-scripts и файл x86_64.lds, если их нет."""
+        script_dir = self.KERNEL_DIR / "linker-scripts"
+        script_file = script_dir / "x86_64.lds"
+
+        if not script_file.exists():
+            print(f"[*] Создание {script_file}...")
+
+            lds_content = '''OUTPUT_FORMAT(elf64-x86-64)
+
+ENTRY(kernel_main)
+
+PHDRS
+{
+    limine_requests PT_LOAD;
+    text PT_LOAD;
+    rodata PT_LOAD;
+    data PT_LOAD;
+}
+
+SECTIONS
+{
+    . = 0xffffffff80000000;
+
+    .limine_requests : {
+        KEEP(*(.limine_requests_start))
+        KEEP(*(.limine_requests))
+        KEEP(*(.limine_requests_end))
+    } :limine_requests
+
+    . = ALIGN(CONSTANT(MAXPAGESIZE));
+
+    .text : {
+        *(.text .text.*)
+    } :text
+
+    . = ALIGN(CONSTANT(MAXPAGESIZE));
+
+    .rodata : {
+        *(.rodata .rodata.*)
+    } :rodata
+
+    .note.gnu.build-id : {
+        *(.note.gnu.build-id)
+    } :rodata
+
+    . = ALIGN(CONSTANT(MAXPAGESIZE));
+
+    .data : {
+        *(.data .data.*)
+    } :data
+
+    .bss : {
+        *(.bss .bss.*)
+        *(COMMON)
+    } :data
+
+    /DISCARD/ : {
+        *(.eh_frame*)
+        *(.note .note.*)
+    }
+}
+'''
+            script_dir.mkdir(exist_ok=True)
+            with open(script_file, 'w', encoding='utf-8') as f:
+                f.write(lds_content.strip() + '\n')
+            print(f"[OK] Файл {script_file} создан.")
+        else:
+            print(f"[OK] Линкер-скрипт уже существует: {script_file}")
 
     def build_kernel(self):
-
         print("[*] Сборка ядра для x86_64...")
+
+        # Гарантируем наличие linker-scripts/x86_64.lds
+        self.ensure_linker_scripts()
 
         from glob import glob
         c_files = [Path(f) for f in glob("src/**/*.c", recursive=True, root_dir=self.KERNEL_DIR)]
@@ -99,7 +213,7 @@ class Builder:
 
         CFLAGS = [
             "-g", "-O2", "-pipe", "-Wall", "-Wextra", "-std=gnu11",
-            "-nostdinc", "-ffreestanding", "-fno-stack-protector",
+            "-ffreestanding", "-fno-stack-protector",
             "-fno-stack-check", "-fno-lto", "-fno-PIC",
             "-ffunction-sections", "-fdata-sections",
             "-m64", "-march=x86-64", "-mabi=sysv",
@@ -109,8 +223,9 @@ class Builder:
 
         CPPFLAGS = [
             f"-I{self.KERNEL_DIR}/src",
-            f"-I{self.KERNEL_DIR}/limine-protocol/include",
-            f"-isystem{self.KERNEL_DIR}/freestnd-c-hdrs/include",
+            f"-I{self.KERNEL_DIR}/../limine-tools/limine-protocol/include",
+            f"-isystem{self.KERNEL_DIR}/../limine-tools/freestnd-c-hdrs/include",
+            "-nostdinc",
             "-DLIMINE_API_REVISION=3",
             "-MMD", "-MP"
         ]
@@ -160,22 +275,27 @@ class Builder:
         print(f"[OK] Ядро собрано: {kernel_out}")
 
     def clone_limine(self):
+        if not self.LIMINE_DIR.parent.exists():
+            self.LIMINE_DIR.parent.mkdir(parents=True, exist_ok=True)
+
         if not self.LIMINE_DIR.exists():
-            print("[*] Клонирование Limine binary release...")
+            print("[*] Клонирование Limine binary release в limine-tools/limine...")
             run([
                 "git", "clone",
                 "--branch", "v10.x-binary",
                 "--depth", "1",
                 "https://codeberg.org/Limine/Limine.git",
-                "limine"
+                str(self.LIMINE_DIR)
             ])
         run(["make"], cwd=self.LIMINE_DIR)
 
     def download_ovmf(self):
+        if not self.OVMF_FILE.parent.exists():
+            self.OVMF_FILE.parent.mkdir(parents=True, exist_ok=True)
+
         if not self.OVMF_FILE.exists():
-            print("[*] Скачивание OVMF...")
-            self.OVMF_DIR.mkdir(exist_ok=True)
-            url = f"https://github.com/osdev0/edk2-ovmf-nightly/releases/latest/download/ovmf-code-x86_64.fd"
+            print("[*] Скачивание OVMF в limine-tools/ovmf...")
+            url = "https://github.com/osdev0/edk2-ovmf-nightly/releases/latest/download/ovmf-code-x86_64.fd"
             run(["curl", "-Lo", str(self.OVMF_FILE), url])
 
     def create_iso(self):
@@ -199,7 +319,7 @@ class Builder:
         run(["cp", str(kernel_src), str(boot_dir / "kernel")])
         run(["cp", "limine.conf", str(limine_dir)])
 
-        # Копируем файлы Limine
+        # Копируем файлы Limine из limine-tools
         files_to_copy = [
             ("limine-bios.sys", "boot/limine"),
             ("limine-bios-cd.bin", "boot/limine"),
@@ -227,6 +347,12 @@ class Builder:
         run([str(self.LIMINE_DIR / "limine"), "bios-install", str(self.ISO_FILE)])
         print(f"[OK] ISO создан: {self.ISO_FILE}")
 
+    def save_demo_iso(self):
+        """Копирует ISO в demo_iso/ с именем NAME.VERSION-TIMESTAMP.iso"""
+        dest = self.DEMO_ISO_DIR / self.FINAL_ISO_NAME
+        run(["cp", str(self.ISO_FILE), str(dest)])
+        print(f"[OK] ISO сохранён как: {dest}")
+
     def run_qemu_uefi(self, cleanup_after=False):
         if not self.ISO_FILE.exists():
             print(f"[!] ISO не найден: {self.ISO_FILE}")
@@ -244,47 +370,123 @@ class Builder:
                 print("\n[CLEANUP] Закрытие QEMU — запуск очистки...")
                 self.clean()
 
+    def _is_text_file(self, path: Path) -> bool:
+        """Проверяет, является ли файл текстовым (безопасно читаемым)."""
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                f.read(1024)
+            return True
+        except (UnicodeDecodeError, PermissionError, IsADirectoryError, FileNotFoundError):
+            return False
+
+    def generate_tree_with_content(self, output_file="OS-TREE.txt"):
+        """Генерирует OS-TREE.txt с деревом проекта и содержимым текстовых файлов (с исключениями)."""
+        print(f"[*] Генерация дерева системы в {output_file}...")
+
+        with open(output_file, "w", encoding="utf-8") as out:
+            root = Path(".")
+
+            skip_dirs = {
+                "bin-x86_64", "obj-x86_64",
+                "cc-runtime", "freestnd-c-hdrs",
+                "limine-protocol", "ovmf", "limine"
+            }
+
+            exclude_dirs = {"__pycache__", ".git", "iso_root"}
+            exclude_files = {"*.o", "*.d", "*.fd", "*.iso", "*.hdd", "*.pyc"}
+
+            def should_exclude(p: Path):
+                if any(part.startswith('.') for part in p.parts):
+                    return True
+                if any(excl in str(p) for excl in exclude_dirs):
+                    return True
+                if any(p.match(pattern) for pattern in exclude_files):
+                    return True
+                return False
+
+            def write_tree(path: Path, prefix="", is_last=True):
+                connector = "└── " if is_last else "├── "
+                out.write(f"{prefix}{connector}{path.name}\n")
+
+                if path.is_dir():
+                    if path.name in skip_dirs:
+                        out.write(f"{prefix}    └── <скрыто: системная/бинарная директория>\n")
+                        return
+                    children = sorted([p for p in path.iterdir() if not should_exclude(p)])
+                    for i, child in enumerate(children):
+                        extension = "    " if is_last else "│   "
+                        write_tree(child, prefix + extension, i == len(children) - 1)
+                else:
+                    if path.name == "build.py":
+                        try:
+                            out.write(f"{prefix}    │\n")
+                            out.write(f"{prefix}    ├── CONTENT:\n")
+                            with open(path, 'r', encoding='utf-8') as f:
+                                content = f.read().strip()
+                                lines = content.splitlines() or ["<empty>"]
+                                for line in lines:
+                                    out.write(f"{prefix}    │   {line}\n")
+                            out.write(f"{prefix}    │\n")
+                        except Exception as e:
+                            out.write(f"{prefix}    │   <ошибка чтения: {e}>\n")
+                        return
+
+                    if self._is_text_file(path):
+                        try:
+                            out.write(f"{prefix}    │\n")
+                            out.write(f"{prefix}    ├── CONTENT:\n")
+                            with open(path, 'r', encoding='utf-8') as f:
+                                content = f.read().strip()
+                                lines = content.splitlines() or ["<empty>"]
+                                for line in lines:
+                                    out.write(f"{prefix}    │   {line}\n")
+                            out.write(f"{prefix}    │\n")
+                        except Exception as e:
+                            out.write(f"{prefix}    │   <ошибка чтения: {e}>\n")
+
+            out.write("📁 OS Project Tree (with text file contents)\n")
+            out.write("=" * 80 + "\n")
+            write_tree(root)
+
+        print(f"[OK] Дерево с содержимым сохранено в {output_file}")
+
 
 def main():
     parser = argparse.ArgumentParser(
         description="Сборка и запуск DEER OS (x86_64)"
     )
-    parser.add_argument(
-        "--run", action="store_true",
-        help="Автоматически собрать и запустить в QEMU (UEFI по умолчанию)"
-    )
-    parser.add_argument(
-        "--clean", action="store_true",
-        help="Очистить объектные файлы (без последующей сборки)"
-    )
-    parser.add_argument(
-        "--distclean", action="store_true",
-        help="Полная очистка: удалить всё, включая зависимости и образы"
-    )
-    parser.add_argument(
-        "--clean-after-run", action="store_true",
-        help="Очистить временные файлы после закрытия QEMU"
-    )
+    parser.add_argument("--run", action="store_true",
+                        help="Автоматически собрать и запустить в QEMU (UEFI по умолчанию)")
+    parser.add_argument("--clean", action="store_true",
+                        help="Очистить объектные файлы (без последующей сборки)")
+    parser.add_argument("--distclean", action="store_true",
+                        help="Полная очистка: удалить всё, включая зависимости и образы")
+    parser.add_argument("--tree", action="store_true",
+                        help="Сгенерировать OS-TREE.txt с деревом и содержимым текстовых файлов")
+    parser.add_argument("--name", type=str,
+                        help="Имя ОС (например, MyDeer)")
+    parser.add_argument("--version", type=str,
+                        help="Версия ОС (например, v0.1-alpha)")
 
     args = parser.parse_args()
-
-    builder = Builder()
+    builder = Builder(name=args.name, version=args.version)
 
     if args.clean:
         builder.clean()
-        return
-    if args.distclean:
+    elif args.distclean:
         builder.distclean()
-        return
-    if args.run:
+    elif args.tree:
+        builder.generate_tree_with_content()
+    elif args.run:
         builder.ensure_deps()
         builder.build_kernel()
         builder.clone_limine()
         builder.create_iso()
-        builder.run_qemu_uefi(cleanup_after=args.clean_after_run)
-        return
-
-    parser.print_help()
+        builder.save_demo_iso()  # Сохраняем ISO с именем и временем
+        builder.generate_tree_with_content()
+        builder.run_qemu_uefi(cleanup_after=True)
+    else:
+        parser.print_help()
 
 
 if __name__ == "__main__":
