@@ -1,0 +1,10 @@
+{
+    "name": "DEER",
+    "version": "v0.0.1",
+    "description": "A 64-bit operating system for extreme conditions.",
+    "author": "VeoQeo",
+    "arch": "x86_64",
+    "bootloader": "limine",
+    "website": null,
+    "license": "MIT"
+}

@@ -267,6 +267,28 @@ SECTIONS
             run(cmd)
             objects.append(obj)
 
+        # Конвертируем font.psf в объектный файл
+        font_psf = self.KERNEL_DIR / "src" / "font.psf"
+        font_o = self.OBJ_DIR / "font.o"
+
+        if font_psf.exists():
+            print("[*] Конвертация font.psf -> font.o...")
+            run([
+                "objcopy",
+                "-I", "binary",
+                "-O", "elf64-x86-64",
+                "-B", "i386",
+                "--redefine-sym", "_binary_kernel_src_font_psf_start=_binary_font_psf_start",
+                "--redefine-sym", "_binary_kernel_src_font_psf_end=_binary_font_psf_end",
+                "--redefine-sym", "_binary_kernel_src_font_psf_size=_binary_font_psf_size",
+                str(font_psf),
+                str(font_o)
+            ])
+            objects.append(font_o)
+        else:
+            print(f"[!] Файл шрифта не найден: {font_psf}")
+            sys.exit(1)
+
         # Линковка
         kernel_out = self.BUILD_DIR / self.OUTPUT
         os.makedirs(self.BUILD_DIR, exist_ok=True)
@@ -361,7 +383,8 @@ SECTIONS
         cmd = (
             f"{self.QEMU} -M q35 "
             f"-drive if=pflash,unit=0,format=raw,file={self.OVMF_FILE},readonly=on "
-            f"-cdrom {self.ISO_FILE} -m 2G"
+            f"-cdrom {self.ISO_FILE} -m 2G "
+            "-serial stdio" 
         )
         try:
             run(cmd, shell=True)
