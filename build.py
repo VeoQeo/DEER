@@ -211,6 +211,7 @@ SECTIONS
         LD = os.getenv("LD", "ld")
         NASM = "nasm"
 
+        # Основные флаги компиляции (без SSE)
         CFLAGS = [
             "-g", "-O2", "-pipe", "-Wall", "-Wextra", "-std=gnu11",
             "-ffreestanding", "-fno-stack-protector",
@@ -218,6 +219,19 @@ SECTIONS
             "-ffunction-sections", "-fdata-sections",
             "-m64", "-march=x86-64", "-mabi=sysv",
             "-mno-80387", "-mno-mmx", "-mno-sse", "-mno-sse2",
+            "-mno-red-zone", "-mcmodel=kernel"
+        ]
+
+        # Специальные флаги для SIMD файлов и kernel.c (с SSE)
+        SIMD_CFLAGS = [
+            "-g", "-O2", "-pipe", "-Wall", "-Wextra", "-std=gnu11",
+            "-ffreestanding", "-fno-stack-protector",
+            "-fno-stack-check", "-fno-lto", "-fno-PIC",
+            "-ffunction-sections", "-fdata-sections",
+            "-m64", "-march=x86-64", "-mabi=sysv",
+            "-mno-80387", "-mno-mmx", 
+            # ВКЛЮЧАЕМ SSE ДЛЯ SIMD ФАЙЛОВ И KERNEL.C:
+            "-msse", "-msse2",
             "-mno-red-zone", "-mcmodel=kernel"
         ]
 
@@ -239,16 +253,26 @@ SECTIONS
 
         os.makedirs(self.OBJ_DIR, exist_ok=True)
 
-        # Компиляция .c
+        # Компиляция .c файлов
         for src in all_c:
             rel_src = Path("src") / src
             obj = self.OBJ_DIR / rel_src.with_suffix(".c.o")
             os.makedirs(obj.parent, exist_ok=True)
-            cmd = [CC] + CFLAGS + CPPFLAGS + ["-c", str(self.KERNEL_DIR / src), "-o", str(obj)]
+            
+            # Выбираем флаги в зависимости от файла
+            src_str = str(src)
+            if "simd" in src_str.lower() or "kernel.c" in src_str:
+                # Для SIMD файлов и kernel.c используем специальные флаги
+                print(f"[*] Компиляция с SSE: {src}")
+                cmd = [CC] + SIMD_CFLAGS + CPPFLAGS + ["-c", str(self.KERNEL_DIR / src), "-o", str(obj)]
+            else:
+                # Для всех остальных файлов - обычные флаги
+                cmd = [CC] + CFLAGS + CPPFLAGS + ["-c", str(self.KERNEL_DIR / src), "-o", str(obj)]
+            
             run(cmd)
             objects.append(obj)
 
-        # Компиляция .S
+        # Компиляция .S файлов (ассемблер) - всегда без SSE
         for src in all_s:
             rel_src = Path("src") / src
             obj = self.OBJ_DIR / rel_src.with_suffix(".S.o")

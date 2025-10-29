@@ -11,5 +11,7 @@ int memcmp(const void *s1, const void *s2, size_t n);
 char* itoa(uint64_t value, char* str, int base);
 size_t strlen(const char *str);
 char* strcat(char* dest, const char* src);
+char* strcpy(char* dest, const char* src);
+char* strncpy(char* dest, const char* src, size_t n);
 
 #endif // STRING_H

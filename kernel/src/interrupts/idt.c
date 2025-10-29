@@ -1,7 +1,8 @@
 #include "include/interrupts/idt.h"
 #include "include/interrupts/isr.h"
 #include "include/drivers/serial.h"
-#include "libc/string.h"  // Для itoa
+#include "libc/string.h" 
+#include "include/memory/paging.h"
 #include <stddef.h>
 
 // IDT таблица (256 записей)
@@ -144,6 +145,10 @@ void idt_init(void) {
     for (int i = 0; i < 32; i++) {
         isr_install_handler(i, exception_handler);
     }
+
+    isr_install_handler(EXCEPTION_DOUBLE_FAULT, handle_double_fault);
+    isr_install_handler(EXCEPTION_GPF, handle_general_protection_fault);
+    isr_install_handler(EXCEPTION_PAGE_FAULT, handle_page_fault);
     
     serial_puts("[IDT] IDT entries set up (0-31: exceptions)\n");
 }

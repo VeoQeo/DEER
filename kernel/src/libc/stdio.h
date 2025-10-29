@@ -16,5 +16,6 @@ void printf_clear(void);
 // Основные функции вывода
 int printf(const char *format, ...);
 int puts(const char *str);
+void printf_init_with_framebuffer(struct limine_framebuffer *fb);
 
 #endif // STDIO_H

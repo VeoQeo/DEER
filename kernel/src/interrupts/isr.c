@@ -2,6 +2,7 @@
 #include "include/interrupts/idt.h"  // <-- ДОБАВЬ ЭТУ СТРОКУ
 #include "include/drivers/serial.h"
 #include "libc/string.h"
+#include "libc/stdio.h"
 
 // Сообщения об исключениях
 static const char *exception_messages[32] = {
@@ -40,43 +41,32 @@ static const char *exception_messages[32] = {
 };
 
 void exception_handler(struct registers *regs) {
-    char buffer[128];
+    // Для критических исключений используем специальные обработчики
+    // Для остальных - общий обработчик
     
-    serial_puts("\n[EXCEPTION] ");
-    serial_puts(exception_messages[regs->int_no]);
-    serial_puts("\n");
-    
-    serial_puts("Error Code: 0x");
-    serial_puts(itoa(regs->err_code, buffer, 16));
-    serial_puts("\n");
-    
-    serial_puts("RIP: 0x");
-    serial_puts(itoa(regs->rip, buffer, 16));
-    serial_puts("\n");
-    
-    serial_puts("CS: 0x");
-    serial_puts(itoa(regs->cs, buffer, 16));
-    serial_puts("\n");
-    
-    serial_puts("RFLAGS: 0x");
-    serial_puts(itoa(regs->rflags, buffer, 16));
-    serial_puts("\n");
-    
-    serial_puts("RSP: 0x");
-    serial_puts(itoa(regs->rsp, buffer, 16));
-    serial_puts("\n");
-    
-    // Для Page Fault выводим дополнительную информацию
-    if (regs->int_no == EXCEPTION_PAGE_FAULT) {
-        uint64_t cr2;
-        asm volatile("mov %%cr2, %0" : "=r"(cr2));
-        serial_puts("CR2: 0x");
-        serial_puts(itoa(cr2, buffer, 16));
-        serial_puts("\n");
+    if (regs->int_no < 32) {
+        printf("\n=== EXCEPTION %d ===\n", regs->int_no);
+        printf("%s\n", exception_messages[regs->int_no]);
+        printf("Error Code: 0x%x\n", regs->err_code);
+        printf("RIP: 0x%x\n", regs->rip);
+        
+        // Для Page Fault выводим дополнительную информацию
+        if (regs->int_no == EXCEPTION_PAGE_FAULT) {
+            uint64_t cr2;
+            asm volatile("mov %%cr2, %0" : "=r"(cr2));
+            printf("Fault Address: 0x%x\n", cr2);
+        }
+        
+        // Для некритических исключений продолжаем работу
+        if (regs->int_no == EXCEPTION_BREAKPOINT || regs->int_no == EXCEPTION_OVERFLOW) {
+            printf("Non-critical exception, continuing...\n");
+            return;
+        }
+        
+        printf("System Halted.\n");
     }
     
-    // Зависаем при исключении
-    serial_puts("[SYSTEM HALTED]\n");
+    // Зависаем при критическом исключении
     for(;;) {
         asm volatile("hlt");
     }

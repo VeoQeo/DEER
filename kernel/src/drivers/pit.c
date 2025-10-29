@@ -2,6 +2,7 @@
 #include "include/drivers/io.h"
 #include "include/drivers/serial.h"
 #include "libc/string.h" 
+#include "libc/stdio.h"
 #include "include/graphics/fb.h"
 #include "include/graphics/font.h"
 #include "include/graphics/color.h"
@@ -42,12 +43,6 @@ void pit_sleep(uint64_t ms) {
 
 // Обработчик прерывания таймера
 void pit_timer_handler(struct registers *regs) {
+    (void)regs; 
     pit_ticks++;
-    // Каждую секунду выводим сообщение (для теста)
-    if (pit_ticks % 1000 == 0) {
-        char buffer[32];
-        serial_puts("[PIT] Timer: ");
-        serial_puts(itoa(pit_ticks / 1000, buffer, 10));
-        serial_puts(" seconds\n");
-    }
 }

@@ -7,6 +7,7 @@
 #include "../../include/graphics/color.h"
 #include "../../include/drivers/serial.h"
 #include "../string.h"
+#include <limine.h>
 
 // Глобальные переменные для текущего фреймбуфера и позиции курсора
 static struct limine_framebuffer *current_fb = NULL;
@@ -15,9 +16,39 @@ static uint32_t cursor_y = 5;
 static uint32_t text_color = COLOR_WHITE;
 static uint32_t bg_color = COLOR_BLACK;
 
+// Флаг инициализации
+static int printf_initialized = 0;
+
+// Наш собственный запрос фреймбуфера
+static volatile struct limine_framebuffer_request fb_request = {
+    .id = LIMINE_FRAMEBUFFER_REQUEST,
+    .revision = 0
+};
+
+// Автоматическая инициализация printf
+static void printf_auto_init(void) {
+    if (printf_initialized) return;
+    
+    // Пытаемся получить фреймбуфер автоматически
+    if (fb_request.response && fb_request.response->framebuffer_count > 0) {
+        current_fb = fb_request.response->framebuffers[0];
+        serial_puts("[PRINTF] Auto-initialized with framebuffer\n");
+    } else {
+        serial_puts("[PRINTF] WARNING: No framebuffer available, using serial only\n");
+    }
+    
+    printf_initialized = 1;
+}
+
 // Установка текущего фреймбуфера
 void printf_set_framebuffer(struct limine_framebuffer *fb) {
     current_fb = fb;
+    printf_initialized = 1;
+    
+    char buffer[32];
+    serial_puts("[PRINTF] Framebuffer set manually at 0x");
+    serial_puts(itoa((uint64_t)fb, buffer, 16));
+    serial_puts("\n");
 }
 
 // Установка позиции курсора
@@ -72,6 +103,8 @@ static void scroll_screen(void) {
 
 // Очистка экрана
 void printf_clear(void) {
+    printf_auto_init();
+    
     if (!current_fb) return;
     
     fb_clear(current_fb, bg_color);
@@ -81,6 +114,14 @@ void printf_clear(void) {
 
 // Вывод одного символа с обработкой специальных символов
 static void putchar(char c) {
+    printf_auto_init();
+    
+    // Всегда выводим в serial для отладки
+    if (c == '\n') {
+        serial_putc('\r');
+    }
+    serial_putc(c);
+    
     if (!current_fb) return;
     
     switch (c) {
@@ -132,8 +173,9 @@ static void putstring(const char *str) {
 
 // Вспомогательная функция для вывода числа в указанной системе счисления
 static void putnumber(uint64_t num, int base, int is_signed, int is_long) {
+    (void)is_long; // Помечаем параметр как использованный
+    
     char buffer[65];
-    char *ptr = buffer;
     
     if (is_signed && (int64_t)num < 0) {
         putchar('-');
@@ -149,13 +191,7 @@ static void putnumber(uint64_t num, int base, int is_signed, int is_long) {
 
 // Основная функция printf
 int printf(const char *format, ...) {
-    if (!current_fb) {
-        // Если фреймбуфер не установлен, выводим в serial
-        serial_puts("[PRINTF] Framebuffer not set, using serial output: ");
-        serial_puts(format);
-        serial_puts("\n");
-        return 0;
-    }
+    printf_auto_init();
     
     va_list args;
     va_start(args, format);
@@ -294,5 +330,12 @@ int printf(const char *format, ...) {
 
 // Упрощенная версия printf для строки
 int puts(const char *str) {
-    return printf("%s\n", str);
+    int result = printf("%s\n", str);
+    return result;
+}
+
+void printf_init_with_framebuffer(struct limine_framebuffer *fb) {
+    current_fb = fb;
+    printf_initialized = 1;
+    serial_puts("[PRINTF] Initialized with framebuffer\n");
 }
