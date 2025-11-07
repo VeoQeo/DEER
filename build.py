@@ -75,9 +75,6 @@ class Builder:
     def distclean(self):
         """Полная очистка: включая зависимости."""
         # При полной очистке всё равно удаляем iso_root
-        if self.ISO_DIR.exists():
-            run(["rm", "-rf", str(self.ISO_DIR)])
-            print(f"[OK] Удалена папка: {self.ISO_DIR}")
             
         self.clean()
         tools_dir = Path("limine-tools")
