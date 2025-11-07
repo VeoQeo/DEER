@@ -23,6 +23,7 @@
 #define PF_USER         (1 << 2)    // User mode access
 #define PF_RESERVED     (1 << 3)    // Reserved bit set
 #define PF_INSTRUCTION  (1 << 4)    // Instruction fetch
+#define VGA_PHYS_ADDRESS 0xB8000
 
 // Page sizes
 #define PAGE_SIZE_4K 0x1000

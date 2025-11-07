@@ -42,6 +42,12 @@ static volatile struct limine_memmap_request memmap_request = {
     .revision = 0
 };
 
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_terminal_request terminal_request = {
+    .id = LIMINE_TERMINAL_REQUEST,
+    .revision = 0
+};
+
 __attribute__((used, section(".limine_requests_start")))
 static volatile LIMINE_REQUESTS_START_MARKER;
 
@@ -50,20 +56,7 @@ static volatile LIMINE_REQUESTS_END_MARKER;
 
 static volatile struct limine_hhdm_response *hhdm_response = NULL;
 static volatile struct limine_memmap_response *memmap_response = NULL;
-
-void test_process1(void) {
-    while (1) {
-        printf("Process 1 running\n");
-        for (volatile int i = 0; i < 1000000; i++);
-    }
-}
-
-void test_process2(void) {
-    while (1) {
-        printf("Process 2 running\n");  
-        for (volatile int i = 0; i < 1000000; i++);
-    }
-}
+static volatile struct limine_terminal_response *terminal_response = NULL;
 
 void kernel_main(void) {
     serial_init();
@@ -83,7 +76,7 @@ void kernel_main(void) {
     } else {
         serial_puts("[DEER] Memory map available\n");
     }
-    
+
     serial_puts("[DEER] Initializing GDT...\n");
     gdt_init();
     gdt_load();
@@ -137,32 +130,34 @@ void kernel_main(void) {
     struct limine_framebuffer *fb = NULL;
 
     if (framebuffer_request.response && framebuffer_request.response->framebuffer_count > 0) {
+        // Используем графический режим (существующий код)
         fb = framebuffer_request.response->framebuffers[0];
-        printf_init_with_framebuffer(fb);  
+        printf_init_with_framebuffer(fb);
+        printf_set_color(COLOR_GREEN);
+        printf_set_bg_color(COLOR_BLACK);
+            
+        printf_clear();
+        printf_set_color(COLOR_ORANGE);
+        printf("\n\nDEER OS v0.0.1\n");
+        printf("===============\n\n");
+        printf_set_color(COLOR_CYAN);
+        printf("System Status:\n");
+        printf("--------------\n");
+        printf_set_color(COLOR_GREEN);
+        printf("GDT: ACTIVE\n");
+        printf("PAGING: ACTIVE\n");
+        printf("PMM: READY\n");
+        printf("IDT: ACTIVE\n");
+        printf("PIC: REMAPPED\n");
+        printf("PIT: INITIALIZED\n");
+        printf("INTERRUPTS: ENABLED\n");
+        
+        printf("\n");
+            
+        printf_set_color(COLOR_GREEN);
+        printf("All systems ready - Timer active\n");
     }
-    printf_set_color(COLOR_GREEN);
-    printf_set_bg_color(COLOR_BLACK);
-        
-    printf_clear();
-    printf_set_color(COLOR_ORANGE);
-    printf("\n\nDEER OS v0.0.1\n");
-    printf("===============\n\n");
-    printf_set_color(COLOR_CYAN);
-    printf("System Status:\n");
-    printf("--------------\n");
-    printf_set_color(COLOR_GREEN);
-    printf("GDT: ACTIVE\n");
-    printf("PAGING: ACTIVE\n");
-    printf("PMM: READY\n");
-    printf("IDT: ACTIVE\n");
-    printf("PIC: REMAPPED\n");
-    printf("PIT: INITIALIZED\n");
-    printf("INTERRUPTS: ENABLED\n");
-    
-    printf("\n");
-        
-    printf_set_color(COLOR_GREEN);
-    printf("All systems ready - Timer active\n");
+ 
         
     serial_puts("[DEER] Graphics initialized successfully\n");
 

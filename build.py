@@ -62,9 +62,7 @@ class Builder:
         if self.OBJ_DIR.exists():
             run(["rm", "-rf", str(self.OBJ_DIR)])
             cleaned.append(str(self.OBJ_DIR))
-        if self.ISO_DIR.exists():
-            run(["rm", "-rf", str(self.ISO_DIR)])
-            cleaned.append(str(self.ISO_DIR))
+        # НЕ очищаем ISO_DIR - оставляем для пользовательских файлов
         if self.ISO_FILE.exists():
             self.ISO_FILE.unlink()
             cleaned.append(str(self.ISO_FILE))
@@ -76,6 +74,11 @@ class Builder:
 
     def distclean(self):
         """Полная очистка: включая зависимости."""
+        # При полной очистке всё равно удаляем iso_root
+        if self.ISO_DIR.exists():
+            run(["rm", "-rf", str(self.ISO_DIR)])
+            print(f"[OK] Удалена папка: {self.ISO_DIR}")
+            
         self.clean()
         tools_dir = Path("limine-tools")
         if tools_dir.exists():
@@ -345,27 +348,25 @@ SECTIONS
             run(["curl", "-Lo", str(self.OVMF_FILE), url])
 
     def create_iso(self):
-        if self.ISO_FILE.exists():
-            print(f"[*] ISO уже существует — пропускаем создание.")
-            return
-
         print("[*] Создание ISO...")
-
-        if self.ISO_DIR.exists():
-            run(["rm", "-rf", str(self.ISO_DIR)])
 
         boot_dir = self.ISO_DIR / "boot"
         limine_dir = boot_dir / "limine"
         efi_dir = self.ISO_DIR / "EFI" / "BOOT"
 
+        # Создаём структуру каталогов, если их нет
         for d in [boot_dir, limine_dir, efi_dir]:
             d.mkdir(parents=True, exist_ok=True)
 
+        # Копируем ядро (всегда обновляем)
         kernel_src = self.BUILD_DIR / self.OUTPUT
         run(["cp", str(kernel_src), str(boot_dir / "kernel")])
-        run(["cp", "limine.conf", str(limine_dir)])
 
-        # Копируем файлы Limine из limine-tools
+        # Копируем конфиг Limine, если его нет
+        if not (limine_dir / "limine.conf").exists():
+            run(["cp", "limine.conf", str(limine_dir)])
+
+        # Копируем файлы Limine из limine-tools (всегда обновляем)
         files_to_copy = [
             ("limine-bios.sys", "boot/limine"),
             ("limine-bios-cd.bin", "boot/limine"),
