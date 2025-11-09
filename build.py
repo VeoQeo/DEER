@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+
+# TODO: --clean-git
+# TODO: clean project for upload on github
 import os
 import sys
 import subprocess
@@ -82,6 +85,56 @@ class Builder:
         if deps_flag.exists():
             deps_flag.unlink()
         print("[OK] Полная очистка завершена.")
+
+   
+    def gitclean(self):
+        """Очистка перед коммитом."""
+        self.clean()
+        # It's assumed 'self.clean()' is another method that works correctly
+
+        tools_dir = Path("kernel/linker-scripts")
+
+        os_tree_deer = Path("OS-TREE.txt")
+
+        limine_tools_dir = Path("limine-tools")
+
+        demo_iso_dir = Path("demo_iso")
+        if demo_iso_dir.exists():
+            try:
+                run(["rm", "-rf", str(demo_iso_dir)])
+                print(f"[OK] Удалена директория {demo_iso_dir}")
+            except OSError as e:
+                printf(f"[ERROR] Не удалось удалить {demo_iso_dir}: {e.strerror}")
+
+        if limine_tools_dir.exists():
+            try:
+                run(["rm", "-rf", str(limine_tools_dir)])
+                print(f"[OK]: Директория {limine_tools_dir} успешно удалена")
+            except OSError as e:
+                printf(f"[ERROR]: Не удалось удалить {limine_tools_dir}")
+
+        if os_tree_deer.exists():
+            try:
+                run(["rm", str(os_tree_deer)])
+                print(f"[OK] Удален файл {os_tree_deer}")
+            except OSError as e:
+                printf(f"[ERROR] Не удалось удалить {os_tree_deer}: {e.strerror}")
+        if tools_dir.exists():
+            try:
+                run(["rm", "-rf", str(tools_dir)])
+                print(f"[OK] Удалена директория {tools_dir}") # Added consistent print
+            except OSError as e:
+                printf(f"[ERROR] Не удалось удалить {tools_dir}: {e.strerror}")
+
+        deps_flag = self.KERNEL_DIR / ".deps-obtained"
+        if deps_flag.exists():
+            try:
+                deps_flag.unlink()
+                print(f"[OK] Удален файл флага зависимостей: {deps_flag.name}") # Added descriptive print
+            except OSError as e:
+                printf(f"[ERROR] Не удалось удалить {deps_flag}: {e.strerror}")
+
+    print("[OK] Очистка завершена.") # More formal message
 
     def ensure_deps(self):
         deps_flag = self.KERNEL_DIR / ".deps-obtained"
@@ -508,6 +561,8 @@ def main():
                         help="Сгенерировать OS-TREE.txt с деревом и содержимым текстовых файлов")
     parser.add_argument("--name", type=str,
                         help="Имя ОС (например, MyDeer)")
+    parser.add_argument("--cleangit", type=str,
+                        help="Очистка проекта перед коммитом")
     parser.add_argument("--version", type=str,
                         help="Версия ОС (например, v0.1-alpha)")
 
@@ -516,6 +571,8 @@ def main():
 
     if args.clean:
         builder.clean()
+    elif args.cleangit:
+        builder.gitclean()
     elif args.distclean:
         builder.distclean()
     elif args.tree:
