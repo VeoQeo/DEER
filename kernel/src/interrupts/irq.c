@@ -3,6 +3,7 @@
 #include "include/interrupts/idt.h"
 #include "include/drivers/serial.h"
 #include "libc/string.h"
+#include "include/sys/apic.h"
 
 static isr_handler_t irq_handlers[16] = {0};
 
@@ -22,7 +23,13 @@ void irq_handler(struct registers *regs) {
         irq_default_handler(regs);
     }
     
-    pic_send_eoi(irq_num);
+    // Отправляем EOI в LAPIC если используется APIC
+    if (apic_available()) {
+        lapic_eoi();
+    } else {
+        // Иначе используем PIC EOI
+        pic_send_eoi(irq_num);
+    }
 }
 
 void irq_init(void) {

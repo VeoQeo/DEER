@@ -276,6 +276,7 @@ struct acpi_state {
     struct acpi_hpet *hpet;
     bool use_xsdt;
     bool acpi_available;
+    volatile struct limine_hhdm_response *hhdm_response; // Добавь эту строку
 };
 
 void acpi_init(volatile struct limine_hhdm_response *hhdm_resp);

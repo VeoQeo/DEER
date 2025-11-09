@@ -23,6 +23,8 @@
 #include "include/sys/acpi.h"
 #include "include/sys/apic.h"
 
+extern struct apic_state apic_state;
+
 __attribute__((used, section(".limine_requests")))
 static volatile LIMINE_BASE_REVISION(3);
 
@@ -60,10 +62,6 @@ static volatile struct limine_hhdm_response *hhdm_response = NULL;
 static volatile struct limine_memmap_response *memmap_response = NULL;
 volatile struct limine_rsdp_response *rsdp_response = NULL;
 
-static volatile double fpu_res = 0.0;
-static volatile double sse_res_mul = 0.0;
-static volatile double sse_res_div = 0.0;
-
 void initialize_subsystems(void) {
     serial_puts("[DEER] Initializing GDT...\n");
     gdt_init();
@@ -79,6 +77,7 @@ void initialize_subsystems(void) {
     heap_init();
     serial_puts("[DEER] Memory initialized\n");
     
+    // Инициализируем PIC сначала (на всякий случай)
     serial_puts("[DEER] Initializing PIC...\n");
     pic_remap();
     serial_puts("[DEER] PIC remapped\n");
@@ -91,16 +90,35 @@ void initialize_subsystems(void) {
     acpi_init(hhdm_response); 
     serial_puts("[DEER] ACPI initialized\n");
 
+    // Инициализируем APIC с HHDM response (как ACPI)
+    serial_puts("[DEER] Initializing APIC...\n");
+    apic_init(hhdm_response);
+    serial_puts("[DEER] APIC initialized\n");
+
     serial_puts("[DEER] Initializing IRQ...\n");
     irq_init();
     serial_puts("[DEER] IRQ initialized\n");
 
-    serial_puts("[DEER] Initializing PIT...\n");
-    pit_init();
-    serial_puts("[DEER] PIT initialized\n");
+    // Выбираем таймер в зависимости от доступности APIC
+    if (apic_state.apic_available && apic_state.ioapic_available) {
+        serial_puts("[DEER] Initializing LAPIC timer...\n");
+        lapic_timer_init(32, 1000); // IRQ0, 1000Hz
+        serial_puts("[DEER] LAPIC timer initialized\n");
+    } else {
+        serial_puts("[DEER] Initializing PIT...\n");
+        pit_init();
+        serial_puts("[DEER] PIT initialized\n");
+    }
 
     serial_puts("[DEER] Installing timer handler...\n");
-    irq_install_handler(0, pit_timer_handler);
+    // Устанавливаем обработчик таймера LAPIC, если APIC активен
+    if (apic_state.apic_available && apic_state.ioapic_available) {
+        irq_install_handler(0, lapic_timer_handler); // Используем новый обработчик
+        serial_puts("[DEER] LAPIC timer handler installed\n");
+    } else {
+        irq_install_handler(0, pit_timer_handler); // Используем старый обработчик для совместимости
+        serial_puts("[DEER] PIT timer handler installed\n");
+    }
     serial_puts("[DEER] Timer handler installed\n");
 }
 
@@ -133,8 +151,11 @@ void display_system_info(struct limine_framebuffer *fb) {
     printf_set_color(COLOR_GREEN);
     printf("All systems ready - Timer active\n");
 
-    pit_sleep(10000);
-    acpi_shutdown();
+   // acpi_shutdown();
+    extern void lapic_sleep_ms(uint64_t ms); // Импортируем функцию
+    lapic_sleep_ms(10000); // Спит 10 секунд используя LAPIC
+
+    printf("\n10 seconds have passed (using LAPIC sleep).");
 }
 
 void kernel_main(void) {
