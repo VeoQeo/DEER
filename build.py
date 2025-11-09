@@ -124,7 +124,7 @@ class Builder:
                 run(["rm", "-rf", str(tools_dir)])
                 print(f"[OK] Удалена директория {tools_dir}") # Added consistent print
             except OSError as e:
-                printf(f"[ERROR] Не удалось удалить {tools_dir}: {e.strerror}")
+                printf(f"[ERROR] Не удалось удалить  {tools_dir}: {e.strerror}")
 
         deps_flag = self.KERNEL_DIR / ".deps-obtained"
         if deps_flag.exists():
