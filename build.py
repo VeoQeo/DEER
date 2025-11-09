@@ -73,7 +73,7 @@ class Builder:
         if cleaned:
             print(f"[OK] Очищено: {', '.join(cleaned)}")
         else:
-            print("[OK] Нечего чистить.")
+            print("[OK] Нечего  чистить.")
 
     def distclean(self):
         """Полная очистка: включая зависимости."""     
