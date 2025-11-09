@@ -86,7 +86,7 @@ class Builder:
             deps_flag.unlink()
         print("[OK] Полная очистка завершена.")
 
-   
+   # Clean for github
     def gitclean(self):
         """Очистка перед коммитом."""
         self.clean()
@@ -112,7 +112,7 @@ class Builder:
                 print(f"[OK]: Директория {limine_tools_dir} успешно удалена")
             except OSError as e:
                 printf(f"[ERROR]: Не удалось удалить {limine_tools_dir}")
-    #   ff
+
         if os_tree_deer.exists():
             try:
                 run(["rm", str(os_tree_deer)])
