@@ -86,7 +86,7 @@ class Builder:
             deps_flag.unlink()
         print("[OK] Полная очистка завершена.")
 
-   # Clean for github
+   # Clean for githubs
     def gitclean(self):
         """Очистка перед коммитом."""
         self.clean()
