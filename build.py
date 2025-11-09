@@ -112,7 +112,7 @@ class Builder:
                 print(f"[OK]: Директория {limine_tools_dir} успешно удалена")
             except OSError as e:
                 printf(f"[ERROR]: Не удалось удалить {limine_tools_dir}")
-
+    #   ff
         if os_tree_deer.exists():
             try:
                 run(["rm", str(os_tree_deer)])
