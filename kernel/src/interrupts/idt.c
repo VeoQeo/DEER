@@ -1,18 +1,15 @@
 #include "include/interrupts/idt.h"
 #include "include/interrupts/isr.h"
 #include "include/drivers/serial.h"
-#include "libc/string.h" 
 #include "include/memory/paging.h"
+#include "libc/string.h" 
 #include <stddef.h>
 
-// IDT таблица (256 записей)
 static struct idt_entry idt[256];
 static struct idt_ptr idtp;
 
-// Внешние функции из ассемблера
 extern void idt_flush(uint64_t idt_ptr);
 
-// Объявления ассемблерных заглушек для всех исключений
 extern void isr_stub_0(void);
 extern void isr_stub_1(void);
 extern void isr_stub_2(void);
@@ -63,7 +60,6 @@ extern void isr_stub_45(void);
 extern void isr_stub_46(void);
 extern void isr_stub_47(void);
 
-// Таблица обработчиков прерываний
 static isr_handler_t isr_handlers[256] = {0};
 
 // Декларация обработчика из isr.c
@@ -144,11 +140,11 @@ void idt_init(void) {
     // Устанавливаем обработчики исключений
     for (int i = 0; i < 32; i++) {
         isr_install_handler(i, exception_handler);
-    }
+    };
 
-    isr_install_handler(EXCEPTION_DOUBLE_FAULT, handle_double_fault);
-    isr_install_handler(EXCEPTION_GPF, handle_general_protection_fault);
     isr_install_handler(EXCEPTION_PAGE_FAULT, handle_page_fault);
+    isr_install_handler(EXCEPTION_GPF, handle_general_protection_fault);
+    isr_install_handler(EXCEPTION_DOUBLE_FAULT, handle_double_fault);
     
     serial_puts("[IDT] IDT entries set up (0-31: exceptions)\n");
 }
@@ -173,16 +169,13 @@ void isr_uninstall_handler(uint8_t num) {
     isr_handlers[num] = NULL;
 }
 
-// Функция-обработчик, вызываемая из ассемблера
 void isr_handler(struct registers *regs) {
     if (isr_handlers[regs->int_no] != NULL) {
         isr_handlers[regs->int_no](regs);
     } else {
         if (regs->int_no >= 32 && regs->int_no < 48) {
-            // Это IRQ - передаем в irq_handler
             irq_handler(regs);
         } else {
-            // Необработанное исключение
             char buffer[64];
             serial_puts("[ISR] No handler for interrupt ");
             serial_puts(itoa(regs->int_no, buffer, 10));

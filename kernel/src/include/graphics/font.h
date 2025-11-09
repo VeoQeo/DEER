@@ -34,7 +34,6 @@ static inline const struct psf_header* get_psf_header(void) {
     return (const struct psf_header*)&_binary_font_psf_start;
 }
 
-// Проверить, что шрифт корректен
 int psf_validate(void) ;
 // Отрисовка символа
 void fb_draw_char(struct limine_framebuffer *fb, char c, uint32_t x, uint32_t y, uint32_t color);

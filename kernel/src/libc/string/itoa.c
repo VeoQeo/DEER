@@ -19,7 +19,6 @@ char* itoa(uint64_t value, char* str, int base) {
         }
     }
 
-    // Разворачиваем строку
     *end = '\0';
     end--;
     while (ptr < end) {

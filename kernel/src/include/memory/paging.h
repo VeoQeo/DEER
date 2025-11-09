@@ -7,7 +7,6 @@
 #include "../interrupts/isr.h"
 #include <limine.h>
 
-// Page table entry flags
 #define PAGING_PRESENT         (1ULL << 0)
 #define PAGING_WRITABLE        (1ULL << 1)
 #define PAGING_USER            (1ULL << 2)
@@ -18,30 +17,26 @@
 #define PAGING_HUGE_PAGE       (1ULL << 7)
 #define PAGING_GLOBAL          (1ULL << 8)
 #define PAGING_NO_EXECUTE      (1ULL << 63)
-#define PF_PRESENT      (1 << 0)    // Page present
-#define PF_WRITE        (1 << 1)    // Write operation
-#define PF_USER         (1 << 2)    // User mode access
-#define PF_RESERVED     (1 << 3)    // Reserved bit set
-#define PF_INSTRUCTION  (1 << 4)    // Instruction fetch
+#define PF_PRESENT      (1 << 0)    
+#define PF_WRITE        (1 << 1)    
+#define PF_USER         (1 << 2)    
+#define PF_RESERVED     (1 << 3)    
+#define PF_INSTRUCTION  (1 << 4)    
 #define VGA_PHYS_ADDRESS 0xB8000
 
-// Page sizes
 #define PAGE_SIZE_4K 0x1000
 #define PAGE_SIZE_2M 0x200000
 #define PAGE_SIZE_1G 0x40000000
 
-// Virtual memory layout
 #define KERNEL_VIRTUAL_BASE 0xFFFFFFFF80000000
 #define HHDM_OFFSET         0xFFFF800000000000
 
-// Page table structure
 typedef uint64_t page_table_entry_t;
 
 struct page_table {
     page_table_entry_t entries[512];
 } __attribute__((aligned(PAGE_SIZE_4K)));
 
-// Paging functions
 void paging_init(volatile struct limine_hhdm_response *hhdm_response);
 void paging_load_cr3(uint64_t cr3_value);
 uint64_t paging_get_cr3(void);
@@ -51,8 +46,6 @@ bool paging_map_page(uint64_t virtual_addr, uint64_t physical_addr, uint64_t fla
 bool paging_unmap_page(uint64_t virtual_addr);
 bool paging_is_mapped(uint64_t virtual_addr);
 
-
-// Memory conversion functions
 void* paging_physical_to_virtual(uint64_t physical_addr);
 uint64_t paging_virtual_to_physical(void* virtual_addr);
 void* paging_hhdm_to_virtual(uint64_t physical_addr);

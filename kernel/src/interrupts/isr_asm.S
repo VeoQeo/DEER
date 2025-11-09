@@ -71,11 +71,9 @@ ISR_NOERRCODE 45
 ISR_NOERRCODE 46
 ISR_NOERRCODE 47
 
-// Общий обработчик для всех прерываний
 .extern isr_handler
 .type isr_common_stub, @function
 isr_common_stub:
-    // Сохраняем все регистры
     push %r15
     push %r14
     push %r13
@@ -92,11 +90,9 @@ isr_common_stub:
     push %rcx
     push %rax
     
-    // Вызываем C-обработчик
     mov %rsp, %rdi
     call isr_handler
     
-    // Восстанавливаем регистры
     pop %rax
     pop %rcx
     pop %rdx

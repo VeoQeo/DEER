@@ -5,7 +5,6 @@
 #include "libc/stdio.h"
 #include <limine.h>
 
-// Совместимость с разными версиями Limine
 #ifndef LIMINE_MEMMAP_EXECUTABLE_AND_MODULES
     #ifdef LIMINE_MEMMAP_KERNEL_AND_MODULES
         #define LIMINE_MEMMAP_EXECUTABLE_AND_MODULES LIMINE_MEMMAP_KERNEL_AND_MODULES
@@ -17,7 +16,6 @@
 static volatile struct limine_memmap_response *current_memmap_response = NULL;
 static volatile struct limine_hhdm_response *current_hhdm_response = NULL;
 
-// Bitmap for tracking physical pages
 static uint8_t* bitmap = NULL;
 static uint64_t bitmap_size = 0;
 static uint64_t total_pages = 0;
@@ -25,7 +23,6 @@ static uint64_t used_pages = 0;
 static uint64_t total_memory = 0;
 static uint64_t bitmap_pages = 0;
 
-// Helper functions
 static void bitmap_set(uint64_t bit) {
     uint64_t byte = bit / 8;
     uint64_t offset = bit % 8;
@@ -51,10 +48,8 @@ static uint64_t find_free_page(void) {
         return (uint64_t)-1;
     }
 
-    // Начинаем поиск с первой страницы, пропуская нулевую
     for (uint64_t i = 1; i < total_pages; i++) {
         if (!bitmap_test(i)) {
-            // Проверяем, что страница действительно доступна
             bool in_usable_region = false;
             for (uint64_t j = 0; j < current_memmap_response->entry_count; j++) {
                 struct limine_memmap_entry* entry = current_memmap_response->entries[j];
@@ -79,7 +74,6 @@ void pmm_init(volatile struct limine_memmap_response *memmap_response,
               volatile struct limine_hhdm_response *hhdm_response) {
     serial_puts("[PMM] Initializing Physical Memory Manager...\n");
     
-    // Сохраняем указатели для использования в других функциях
     current_memmap_response = memmap_response;
     current_hhdm_response = hhdm_response;
     
@@ -93,7 +87,6 @@ void pmm_init(volatile struct limine_memmap_response *memmap_response,
         return;
     }
     
-    // Calculate total memory and find largest usable region for bitmap
     uint64_t highest_address = 0;
     uint64_t largest_region_size = 0;
     uint64_t largest_region_base = 0;
@@ -153,7 +146,6 @@ void pmm_init(volatile struct limine_memmap_response *memmap_response,
                 highest_address = end;
             }
             
-            // Find largest usable region for bitmap
             if (entry->length > largest_region_size) {
                 largest_region_size = entry->length;
                 largest_region_base = entry->base;
@@ -161,9 +153,8 @@ void pmm_init(volatile struct limine_memmap_response *memmap_response,
         }
     }
     
-    // Calculate total pages (4KB each)
     total_pages = highest_address / PAGE_SIZE_4K;
-    bitmap_size = (total_pages + 7) / 8; // Round up to nearest byte
+    bitmap_size = (total_pages + 7) / 8; 
     bitmap_pages = (bitmap_size + PAGE_SIZE_4K - 1) / PAGE_SIZE_4K;
     
     serial_puts("[PMM] Total memory: ");
@@ -183,17 +174,14 @@ void pmm_init(volatile struct limine_memmap_response *memmap_response,
     serial_puts(itoa(bitmap_pages, buffer, 10));
     serial_puts(" pages)\n");
     
-    // Find a location for the bitmap in the largest usable region
     if (largest_region_base == 0 || largest_region_size < bitmap_size) {
         serial_puts("[PMM] ERROR: No suitable region for bitmap!\n");
         return;
     }
     
-    // Place bitmap at the beginning of the largest region
     uint64_t bitmap_physical = largest_region_base;
     bitmap = (uint8_t*)(bitmap_physical + current_hhdm_response->offset);
     
-    // Initialize bitmap (all pages are free initially)
     memset(bitmap, 0, bitmap_size);
     used_pages = 0;
     
@@ -203,12 +191,10 @@ void pmm_init(volatile struct limine_memmap_response *memmap_response,
     serial_puts(itoa((uint64_t)bitmap, buffer, 16));
     serial_puts("\n");
     
-    // Mark all non-usable memory as used
     for (uint64_t i = 0; i < current_memmap_response->entry_count; i++) {
         struct limine_memmap_entry* entry = current_memmap_response->entries[i];
         
         if (entry->type != LIMINE_MEMMAP_USABLE) {
-            // Mark this region as used in bitmap
             uint64_t start_page = entry->base / PAGE_SIZE_4K;
             uint64_t end_page = (entry->base + entry->length + PAGE_SIZE_4K - 1) / PAGE_SIZE_4K;
             
@@ -220,7 +206,6 @@ void pmm_init(volatile struct limine_memmap_response *memmap_response,
         }
     }
     
-    // Mark the bitmap region itself as used
     uint64_t bitmap_start_page = bitmap_physical / PAGE_SIZE_4K;
     uint64_t bitmap_end_page = (bitmap_physical + bitmap_size + PAGE_SIZE_4K - 1) / PAGE_SIZE_4K;
     
@@ -349,14 +334,11 @@ void pmm_dump_memory_map(void) {
         serial_puts(" MB)\n");
     }
     
-    // Вывод суммарной информации
     serial_puts("[PMM] Summary: ");
     serial_puts(itoa(total_usable / 1024 / 1024, buffer, 10));
     serial_puts(" MB usable, ");
     serial_puts(itoa(total_reserved / 1024 / 1024, buffer, 10));
     serial_puts(" MB reserved\n");
-    
-    // Точная статистика PMM
     serial_puts("[PMM] PMM Stats: ");
     serial_puts(itoa(pmm_get_free_memory() / 1024 / 1024, buffer, 10));
     serial_puts(" MB free, ");

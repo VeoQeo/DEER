@@ -5,27 +5,21 @@
 void pic_remap(void) {
     serial_puts("[PIC] Remapping PIC...\n");
     
-    // Сохраняем маски
     uint8_t pic1_mask = inb(PIC1_DATA);
     uint8_t pic2_mask = inb(PIC2_DATA);
     
-    // ICW1 - инициализация
     outb(PIC1_COMMAND, PIC_ICW1_INIT | PIC_ICW1_ICW4);
     outb(PIC2_COMMAND, PIC_ICW1_INIT | PIC_ICW1_ICW4);
     
-    // ICW2 - смещения
-    outb(PIC1_DATA, PIC1_OFFSET);   // IRQ 0-7 -> INT 32-39
-    outb(PIC2_DATA, PIC2_OFFSET);   // IRQ 8-15 -> INT 40-47
+    outb(PIC1_DATA, PIC1_OFFSET);   
+    outb(PIC2_DATA, PIC2_OFFSET);   
     
-    // ICW3 - каскадирование
-    outb(PIC1_DATA, 0x04);          // PIC1 имеет slave на IRQ2
-    outb(PIC2_DATA, 0x02);          // PIC2 cascade identity
+    outb(PIC1_DATA, 0x04);          
+    outb(PIC2_DATA, 0x02);          
     
-    // ICW4 - дополнительная инициализация
     outb(PIC1_DATA, PIC_ICW4_8086);
     outb(PIC2_DATA, PIC_ICW4_8086);
     
-    // Восстанавливаем маски
     outb(PIC1_DATA, pic1_mask);
     outb(PIC2_DATA, pic2_mask);
     
@@ -40,7 +34,6 @@ void pic_send_eoi(uint8_t irq) {
 }
 
 void pic_disable(void) {
-    // Маскируем все IRQ
     outb(PIC1_DATA, 0xFF);
     outb(PIC2_DATA, 0xFF);
     serial_puts("[PIC] PIC disabled\n");

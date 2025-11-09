@@ -6,5 +6,6 @@
 void serial_init(void);
 void serial_putc(char c);
 void serial_puts(const char *str);
+void serial_put_hex64(uint64_t v);
 
 #endif // SERIAL_H

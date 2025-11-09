@@ -6,7 +6,6 @@
 #include <stdbool.h>
 #include <limine.h>
 
-// Physical memory manager
 void pmm_init(volatile struct limine_memmap_response *memmap_response,
               volatile struct limine_hhdm_response *hhdm_response);
 uint64_t pmm_alloc_page(void);

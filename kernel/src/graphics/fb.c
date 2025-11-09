@@ -57,7 +57,6 @@ void fb_draw_char(struct limine_framebuffer *fb, char c, uint32_t x, uint32_t y,
     
     // Обработка разных диапазонов символов
     if ((uint8_t)c < 128) {
-        // Basic ASCII - работают отлично!
         glyph_index = (uint8_t)c;
     } else if ((uint8_t)c >= 128) {
         glyph_index = '?'; 

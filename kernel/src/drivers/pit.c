@@ -12,20 +12,14 @@ volatile uint64_t pit_ticks = 0;
 
 void pit_init(void) {
     serial_puts("[PIT] Initializing PIT...\n");
-    
-    // Устанавливаем частоту
     pit_set_frequency(PIT_DIVIDER);
-    
     serial_puts("[PIT] PIT initialized at 1000 Hz\n");
 }
 
 void pit_set_frequency(uint32_t divider) {
     uint32_t divisor = PIT_BASE_FREQ / divider;
     
-    // Отправляем команду PIT
     outb(PIT_COMMAND, PIT_CHANNEL0_SEL | PIT_ACCESS_LOHI | PIT_MODE3);
-    
-    // Устанавливаем делитель
     outb(PIT_CHANNEL0, divisor & 0xFF);
     outb(PIT_CHANNEL0, (divisor >> 8) & 0xFF);
 }
@@ -41,7 +35,6 @@ void pit_sleep(uint64_t ms) {
     }
 }
 
-// Обработчик прерывания таймера
 void pit_timer_handler(struct registers *regs) {
     (void)regs; 
     pit_ticks++;

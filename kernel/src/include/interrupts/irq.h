@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include "isr.h"
 
-// Номера IRQ
 #define IRQ0    32      // Timer
 #define IRQ1    33      // Keyboard
 #define IRQ2    34      // Cascade
@@ -22,7 +21,6 @@
 #define IRQ14   46      // Primary ATA
 #define IRQ15   47      // Secondary ATA
 
-// Функции
 void irq_init(void);
 void irq_install_handler(uint8_t irq, isr_handler_t handler);
 void irq_uninstall_handler(uint8_t irq);

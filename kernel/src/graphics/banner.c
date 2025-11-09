@@ -36,6 +36,6 @@ void draw_deer_banner(struct limine_framebuffer *fb, uint32_t x, uint32_t y, uin
     uint32_t current_y = y;
     for (int i = 0; i < 25; i++) {
         fb_draw_string(fb, banner_lines[i], x, current_y, color);
-        current_y += 16; // Переход на следующую строку (высота шрифта)
+        current_y += 16; 
     }
 }

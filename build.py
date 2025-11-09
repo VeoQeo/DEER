@@ -73,9 +73,7 @@ class Builder:
             print("[OK] Нечего чистить.")
 
     def distclean(self):
-        """Полная очистка: включая зависимости."""
-        # При полной очистке всё равно удаляем iso_root
-            
+        """Полная очистка: включая зависимости."""     
         self.clean()
         tools_dir = Path("limine-tools")
         if tools_dir.exists():

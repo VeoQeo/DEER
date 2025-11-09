@@ -9,27 +9,21 @@
 #include "../string.h"
 #include <limine.h>
 
-// Глобальные переменные для текущего фреймбуфера и позиции курсора
 static struct limine_framebuffer *current_fb = NULL;
 static uint32_t cursor_x = 5;
 static uint32_t cursor_y = 5;
 static uint32_t text_color = COLOR_WHITE;
 static uint32_t bg_color = COLOR_BLACK;
-
-// Флаг инициализации
 static int printf_initialized = 0;
 
-// Наш собственный запрос фреймбуфера
 static volatile struct limine_framebuffer_request fb_request = {
     .id = LIMINE_FRAMEBUFFER_REQUEST,
     .revision = 0
 };
 
-// Автоматическая инициализация printf
 static void printf_auto_init(void) {
     if (printf_initialized) return;
     
-    // Пытаемся получить фреймбуфер автоматически
     if (fb_request.response && fb_request.response->framebuffer_count > 0) {
         current_fb = fb_request.response->framebuffers[0];
         serial_puts("[PRINTF] Auto-initialized with framebuffer\n");
@@ -40,7 +34,6 @@ static void printf_auto_init(void) {
     printf_initialized = 1;
 }
 
-// Установка текущего фреймбуфера
 void printf_set_framebuffer(struct limine_framebuffer *fb) {
     current_fb = fb;
     printf_initialized = 1;
@@ -51,37 +44,31 @@ void printf_set_framebuffer(struct limine_framebuffer *fb) {
     serial_puts("\n");
 }
 
-// Установка позиции курсора
 void printf_set_cursor(uint32_t x, uint32_t y) {
     cursor_x = x;
     cursor_y = y;
 }
 
-// Установка цвета текста
 void printf_set_color(uint32_t color) {
     text_color = color;
 }
 
-// Установка цвета фона
 void printf_set_bg_color(uint32_t color) {
     bg_color = color;
 }
 
-// Получение текущей позиции курсора
 void printf_get_cursor(uint32_t *x, uint32_t *y) {
     *x = cursor_x;
     *y = cursor_y;
 }
 
-// Прокрутка экрана
 static void scroll_screen(void) {
     if (!current_fb) return;
     
-    uint32_t scroll_height = 16; // Высота одной строки
+    uint32_t scroll_height = 16; 
     uint32_t screen_height = current_fb->height;
     uint32_t screen_width = current_fb->width;
     
-    // Копируем содержимое экрана вверх
     for (uint32_t y = scroll_height; y < screen_height; y++) {
         for (uint32_t x = 0; x < screen_width; x++) {
             uint32_t *fb_ptr = (uint32_t *)current_fb->address;
@@ -90,18 +77,14 @@ static void scroll_screen(void) {
         }
     }
     
-    // Очищаем последнюю строку
     for (uint32_t y = screen_height - scroll_height; y < screen_height; y++) {
         for (uint32_t x = 0; x < screen_width; x++) {
             fb_draw_pixel(current_fb, x, y, bg_color);
         }
     }
-    
-    // Обновляем позицию курсора
     cursor_y -= scroll_height;
 }
 
-// Очистка экрана
 void printf_clear(void) {
     printf_auto_init();
     
@@ -112,11 +95,9 @@ void printf_clear(void) {
     cursor_y = 5;
 }
 
-// Вывод одного символа с обработкой специальных символов
 static void putchar(char c) {
     printf_auto_init();
     
-    // Всегда выводим в serial для отладки
     if (c == '\n') {
         serial_putc('\r');
     }
@@ -125,29 +106,27 @@ static void putchar(char c) {
     if (!current_fb) return;
     
     switch (c) {
-        case '\n': // Новая строка
+        case '\n': 
             cursor_x = 5;
             cursor_y += 16;
             break;
             
-        case '\r': // Возврат каретки
+        case '\r': 
             cursor_x = 5;
             break;
             
-        case '\t': // Табуляция
-            cursor_x = (cursor_x + 32) & ~31; // Выравнивание до 32 пикселей
+        case '\t': 
+            cursor_x = (cursor_x + 32) & ~31; 
             break;
             
-        case '\b': // Backspace
+        case '\b': 
             if (cursor_x > 5) {
                 cursor_x -= 8;
-                // Стираем символ
                 fb_fill_rect(current_fb, cursor_x, cursor_y, 8, 16, bg_color);
             }
             break;
             
         default:
-            // Проверяем, не вышли ли мы за границы экрана
             if (cursor_x + 8 >= current_fb->width) {
                 cursor_x = 5;
                 cursor_y += 16;
@@ -157,24 +136,19 @@ static void putchar(char c) {
                 scroll_screen();
             }
             
-            // Выводим символ
             fb_draw_char(current_fb, c, cursor_x, cursor_y, text_color);
             cursor_x += 8;
             break;
     }
 }
 
-// Вспомогательная функция для вывода строки
 static void putstring(const char *str) {
     while (*str) {
         putchar(*str++);
     }
 }
 
-// Вспомогательная функция для вывода числа в указанной системе счисления
-static void putnumber(uint64_t num, int base, int is_signed, int is_long) {
-    (void)is_long; // Помечаем параметр как использованный
-    
+static void putnumber(uint64_t num, int base, int is_signed) {
     char buffer[65];
     
     if (is_signed && (int64_t)num < 0) {
@@ -182,14 +156,11 @@ static void putnumber(uint64_t num, int base, int is_signed, int is_long) {
         num = (uint64_t)(-(int64_t)num);
     }
     
-    // Преобразуем число в строку
     itoa(num, buffer, base);
     
-    // Выводим строку
     putstring(buffer);
 }
 
-// Основная функция printf
 int printf(const char *format, ...) {
     printf_auto_init();
     
@@ -202,7 +173,6 @@ int printf(const char *format, ...) {
         if (*format == '%') {
             format++;
             
-            // Обработка флагов
             int is_long = 0;
             int is_alt = 0;
             
@@ -221,78 +191,77 @@ int printf(const char *format, ...) {
                 }
                 break;
             }
-            
-            // Обработка спецификаторов
+
             switch (*format) {
                 case 'd':
-                case 'i': { // Целое число со знаком
+                case 'i': { 
                     if (is_long) {
-                        int64_t num = va_arg(args, int64_t);
-                        putnumber((uint64_t)num, 10, 1, is_long);
+                        uint64_t num = (uint64_t)va_arg(args, long long);
+                        putnumber(num, 10, 1);
                     } else {
-                        int num = va_arg(args, int);
-                        putnumber((uint64_t)num, 10, 1, is_long);
+                        uint32_t num = (uint32_t)va_arg(args, int);
+                        putnumber(num, 10, 1);
                     }
                     chars_written++;
                     break;
                 }
                 
-                case 'u': { // Целое число без знака
+                case 'u': { 
                     if (is_long) {
-                        uint64_t num = va_arg(args, uint64_t);
-                        putnumber(num, 10, 0, is_long);
+                        uint64_t num = (uint64_t)va_arg(args, unsigned long long);
+                        putnumber(num, 10, 0);
                     } else {
-                        unsigned int num = va_arg(args, unsigned int);
-                        putnumber(num, 10, 0, is_long);
+                        uint32_t num = (uint32_t)va_arg(args, unsigned int);
+                        putnumber(num, 10, 0);
                     }
                     chars_written++;
                     break;
                 }
                 
-                case 'x': { // Шестнадцатеричное число
+                case 'x': { 
                     if (is_long) {
-                        uint64_t num = va_arg(args, uint64_t);
+                        uint64_t num = (uint64_t)va_arg(args, unsigned long long);
                         if (is_alt) putstring("0x");
-                        putnumber(num, 16, 0, is_long);
+                        putnumber(num, 16, 0);
                     } else {
-                        unsigned int num = va_arg(args, unsigned int);
+                        uint32_t num = (uint32_t)va_arg(args, unsigned int);
                         if (is_alt) putstring("0x");
-                        putnumber(num, 16, 0, is_long);
+                        putnumber(num, 16, 0);
                     }
                     chars_written++;
                     break;
                 }
                 
-                case 'o': { // Восьмеричное число
+                case 'o': { 
                     if (is_long) {
-                        uint64_t num = va_arg(args, uint64_t);
+                        uint64_t num = (uint64_t)va_arg(args, unsigned long long);
                         if (is_alt) putstring("0");
-                        putnumber(num, 8, 0, is_long);
+                        putnumber(num, 8, 0);
                     } else {
-                        unsigned int num = va_arg(args, unsigned int);
+                        uint32_t num = (uint32_t)va_arg(args, unsigned int);
                         if (is_alt) putstring("0");
-                        putnumber(num, 8, 0, is_long);
+                        putnumber(num, 8, 0);
                     }
                     chars_written++;
                     break;
                 }
                 
-                case 'p': { // Указатель
+                case 'p': { 
                     void *ptr = va_arg(args, void*);
                     putstring("0x");
-                    putnumber((uint64_t)ptr, 16, 0, 1);
+                    putnumber((uint64_t)ptr, 16, 0);
                     chars_written++;
                     break;
                 }
                 
-                case 'c': { // Символ
+                case 'c': { 
                     char c = (char)va_arg(args, int);
                     putchar(c);
                     chars_written++;
                     break;
                 }
                 
-                case 's': { // Строка
+                case 's': { 
                     char *str = va_arg(args, char*);
                     if (!str) {
                         putstring("(null)");
@@ -303,20 +272,19 @@ int printf(const char *format, ...) {
                     break;
                 }
                 
-                case '%': { // Символ процента
+                case '%': { 
                     putchar('%');
                     chars_written++;
                     break;
                 }
                 
-                default: // Неизвестный спецификатор
+                default: 
                     putchar('%');
                     putchar(*format);
                     chars_written += 2;
                     break;
             }
         } else {
-            // Обычный символ
             putchar(*format);
             chars_written++;
         }
@@ -328,7 +296,6 @@ int printf(const char *format, ...) {
     return chars_written;
 }
 
-// Упрощенная версия printf для строки
 int puts(const char *str) {
     int result = printf("%s\n", str);
     return result;
@@ -338,4 +305,11 @@ void printf_init_with_framebuffer(struct limine_framebuffer *fb) {
     current_fb = fb;
     printf_initialized = 1;
     serial_puts("[PRINTF] Initialized with framebuffer\n");
+}
+
+// Вывод uint64_t
+void printf_uint64(uint64_t value) {
+    char buffer[21]; 
+    itoa(value, buffer, 10);
+    printf("%s", buffer);
 }

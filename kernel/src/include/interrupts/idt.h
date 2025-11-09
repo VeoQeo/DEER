@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 
-// Структура дескриптора IDT
 struct idt_entry {
     uint16_t base_low;
     uint16_t selector;
@@ -14,18 +13,16 @@ struct idt_entry {
     uint32_t zero;
 } __attribute__((packed));
 
-// Структура указателя IDT
 struct idt_ptr {
     uint16_t limit;
     uint64_t base;
 } __attribute__((packed));
 
-// Атрибуты дескриптора IDT
 #define IDT_PRESENT     (1 << 7)
 #define IDT_RING0       (0 << 5)
 #define IDT_RING3       (3 << 5)
-#define IDT_TYPE_INT    0x0E    // 32-bit interrupt gate
-#define IDT_TYPE_TRAP   0x0F    // 32-bit trap gate
+#define IDT_TYPE_INT    0x0E    
+#define IDT_TYPE_TRAP   0x0F    
 
 // Исключения x86_64
 #define EXCEPTION_DIVISION_ERROR        0
@@ -51,7 +48,6 @@ struct idt_ptr {
 #define EXCEPTION_VIRTUALIZATION        20
 #define EXCEPTION_SECURITY              30
 
-// Функции
 void idt_init(void);
 void idt_load(void);
 void idt_set_entry(uint8_t index, uint64_t base, uint16_t selector, uint8_t type_attr);
