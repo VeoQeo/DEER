@@ -104,27 +104,27 @@ class Builder:
                 run(["rm", "-rf", str(demo_iso_dir)])
                 print(f"[OK] Удалена директория {demo_iso_dir}")
             except OSError as e:
-                printf(f"[ERROR] Не удалось удалить {demo_iso_dir}: {e.strerror}")
+                print(f"[ERROR] Не удалось удалить {demo_iso_dir}: {e.strerror}")
 
         if limine_tools_dir.exists():
             try:
                 run(["rm", "-rf", str(limine_tools_dir)])
                 print(f"[OK]: Директория {limine_tools_dir} успешно удалена")
             except OSError as e:
-                printf(f"[ERROR]: Не удалось удалить {limine_tools_dir}")
+                print(f"[ERROR]: Не удалось удалить {limine_tools_dir}")
 
         if os_tree_deer.exists():
             try:
                 run(["rm", str(os_tree_deer)])
                 print(f"[OK] Удален файл {os_tree_deer}")
             except OSError as e:
-                printf(f"[ERROR] Не удалось удалить {os_tree_deer}: {e.strerror}")
+                print(f"[ERROR] Не удалось удалить {os_tree_deer}: {e.strerror}")
         if tools_dir.exists():
             try:
                 run(["rm", "-rf", str(tools_dir)])
                 print(f"[OK] Удалена директория {tools_dir}") # Added consistent print
             except OSError as e:
-                printf(f"[ERROR] Не удалось удалить {tools_dir}: {e.strerror}")
+                print(f"[ERROR] Не удалось удалить {tools_dir}: {e.strerror}")
 
         deps_flag = self.KERNEL_DIR / ".deps-obtained"
         if deps_flag.exists():
@@ -132,7 +132,7 @@ class Builder:
                 deps_flag.unlink()
                 print(f"[OK] Удален файл флага зависимостей: {deps_flag.name}") # Added descriptive print
             except OSError as e:
-                printf(f"[ERROR] Не удалось удалить {deps_flag}: {e.strerror}")
+                print(f"[ERROR] Не удалось удалить {deps_flag}: {e.strerror}")
 
     print("[OK] Очистка завершена.") # More formal message
 
