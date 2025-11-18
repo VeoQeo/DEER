@@ -4,6 +4,7 @@
 #include "include/drivers/serial.h"
 #include "libc/string.h"
 #include "include/sys/apic.h"
+#include "include/tasking/task.h"
 
 static isr_handler_t irq_handlers[16] = {0};
 
@@ -39,7 +40,6 @@ void irq_init(void) {
     for (int i = 0; i < 16; i++) {
         irq_install_handler(i, irq_default_handler);
     }
-    
     serial_puts("[IRQ] IRQ handlers initialized\n");
 }
 

@@ -8,6 +8,33 @@
 #include "libc/stdio.h"
 #include "libc/string.h"
 #include "include/memory/paging.h"
+#include "include/tasking/task.h"
+
+// Макрос для чтения из MMIO APIC
+#define APIC_READ(reg) (*(volatile uint32_t*)(apic_state.lapic_base + (reg)))
+// Макрос для записи в MMIO APIC
+#define APIC_WRITE(reg, val) (*(volatile uint32_t*)(apic_state.lapic_base + (reg)) = (val))
+
+// Определения регистров ICR
+#define APIC_ICR1 0x310
+#define APIC_ICR2 0x300
+#define APIC_ICR_DELIVERY_MODE_SHIFT 8
+#define APIC_ICR_DEST_MODE_SHIFT 11
+#define APIC_ICR_LEVEL_SHIFT 14
+#define APIC_ICR_TRIGGER_MODE_SHIFT 15
+#define APIC_ICR_DEST_SHORTHAND_SHIFT 18
+#define APIC_ICR_DELIVERY_STATUS_BIT 12
+
+#define APIC_DELIVERY_MODE_INIT  5
+#define APIC_DELIVERY_MODE_SIPI  6
+#define APIC_LEVEL_DEASSERT      0
+#define APIC_LEVEL_ASSERT        1
+#define APIC_TRIGGER_MODE_EDGE   0
+#define APIC_TRIGGER_MODE_LEVEL  1
+#define APIC_DEST_SHORTHAND_NONE 0
+#define APIC_DEST_SHORTHAND_SELF 1
+#define APIC_DEST_SHORTHAND_ALL  2
+#define APIC_DEST_SHORTHAND_ALL_EXCEPT_SELF 3
 
 struct apic_state apic_state = {0};
 
@@ -288,6 +315,47 @@ void apic_disable_pic(void) {
     outb(0x21, 0xFF);
 
     serial_puts("[APIC] PIC disabled\n");
+}
+// Вспомогательная функция для отправки IPI
+static void lapic_send_ipi(uint32_t icr1_val, uint32_t icr2_val) {
+    // Ждем, пока предыдущий IPI не будет отправлен
+    while (APIC_READ(APIC_ICR1) & (1 << APIC_ICR_DELIVERY_STATUS_BIT)) {
+         // asm volatile("pause"); // Опционально для эффективного ожидания
+    }
+    APIC_WRITE(APIC_ICR2, icr2_val); // Сначала ICR2 (Destination)
+    APIC_WRITE(APIC_ICR1, icr1_val); // Потом ICR1 (Vector, Delivery Mode, Level, Trigger Mode)
+}
+
+
+void lapic_send_init(uint32_t lapic_id) {
+    uint32_t icr1 = (APIC_DELIVERY_MODE_INIT << APIC_ICR_DELIVERY_MODE_SHIFT) |
+                    (APIC_LEVEL_ASSERT << APIC_ICR_LEVEL_SHIFT) |
+                    (APIC_TRIGGER_MODE_EDGE << APIC_ICR_TRIGGER_MODE_SHIFT) |
+                    (APIC_DEST_SHORTHAND_NONE << APIC_ICR_DEST_SHORTHAND_SHIFT);
+    uint32_t icr2 = (lapic_id & 0xFF) << 24; // Destination Field
+
+    serial_puts("[APIC] Sending INIT IPI to LAPIC ID ");
+    char buf[16];
+    serial_puts(itoa(lapic_id, buf, 10));
+    serial_puts("\n");
+    lapic_send_ipi(icr1, icr2);
+}
+
+void lapic_send_startup(uint32_t lapic_id, uint8_t vector) { // vector = target_page >> 12
+    uint32_t icr1 = (APIC_DELIVERY_MODE_SIPI << APIC_ICR_DELIVERY_MODE_SHIFT) |
+                    (APIC_LEVEL_ASSERT << APIC_ICR_LEVEL_SHIFT) |
+                    (APIC_TRIGGER_MODE_EDGE << APIC_ICR_TRIGGER_MODE_SHIFT) |
+                    (APIC_DEST_SHORTHAND_NONE << APIC_ICR_DEST_SHORTHAND_SHIFT) |
+                    (vector & 0xFF);
+    uint32_t icr2 = (lapic_id & 0xFF) << 24; // Destination Field
+
+    serial_puts("[APIC] Sending SIPI IPI to LAPIC ID ");
+    char buf[16];
+    serial_puts(itoa(lapic_id, buf, 10));
+    serial_puts(" with vector 0x");
+    serial_put_hex8(vector); // или itoa(vector, buf, 16);
+    serial_puts("\n");
+    lapic_send_ipi(icr1, icr2);
 }
 
 void lapic_timer_init(uint8_t vector, uint32_t frequency) {

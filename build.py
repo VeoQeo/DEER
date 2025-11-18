@@ -401,7 +401,7 @@ SECTIONS
             sys.exit(1)
         self.download_ovmf()
         cmd = (
-            f"{self.QEMU} -M q35 "
+            f"{self.QEMU} -M q35 -smp 8 "
             f"-drive if=pflash,unit=0,format=raw,file={self.OVMF_FILE},readonly=on "
             f"-cdrom {self.ISO_FILE} -m 2G "
             "-serial stdio" 
@@ -422,9 +422,35 @@ SECTIONS
         except (UnicodeDecodeError, PermissionError, IsADirectoryError, FileNotFoundError):
             return False
 
-    def generate_tree_with_content(self, output_file="OS-TREE.txt"):
-        """Генерирует OS-TREE.txt с деревом проекта и содержимым текстовых файлов (с исключениями)."""
+    def _find_files_by_patterns(self, patterns):
+        """Находит файлы по паттернам (рекурсивно)."""
+        found_files = set()
+        for pattern in patterns:
+            # Ищем во всех поддиректориях
+            for path in Path('.').rglob(pattern):
+                if path.is_file():
+                    found_files.add(path)
+        return sorted(found_files)
+
+    def generate_tree_with_content(self, output_file="OS-TREE.txt", specific_files=None, structure_only=False):
+        """Генерирует OS-TREE.txt с деревом проекта и содержимым текстовых файлов.
+        
+        Args:
+            output_file: Имя выходного файла
+            specific_files: Список файлов для отображения (None = все файлы)
+            structure_only: Если True, отображать только структуру без содержимого
+        """
         print(f"[*] Генерация дерева системы в {output_file}...")
+        
+        if specific_files:
+            print(f"[*] Отображаем только выбранные файлы: {specific_files}")
+            target_files = self._find_files_by_patterns(specific_files)
+            if not target_files:
+                print(f"[!] Файлы по паттернам {specific_files} не найдены!")
+                return
+            print(f"[*] Найдено файлов: {len(target_files)}")
+        else:
+            target_files = None
 
         with open(output_file, "w", encoding="utf-8") as out:
             root = Path(".")
@@ -455,26 +481,30 @@ SECTIONS
                     if path.name in skip_dirs:
                         out.write(f"{prefix}    └── <скрыто: системная/бинарная директория>\n")
                         return
+                    
                     children = sorted([p for p in path.iterdir() if not should_exclude(p)])
+                    
+                    # Если указаны конкретные файлы, фильтруем директории
+                    if target_files:
+                        # Оставляем только те директории, которые содержат целевые файлы
+                        relevant_children = []
+                        for child in children:
+                            if child.is_dir():
+                                # Проверяем, содержит ли директория целевые файлы
+                                if any(target_file.is_relative_to(child) for target_file in target_files):
+                                    relevant_children.append(child)
+                            else:
+                                # Файл оставляем только если он в списке целевых
+                                if child in target_files:
+                                    relevant_children.append(child)
+                        children = relevant_children
+                    
                     for i, child in enumerate(children):
                         extension = "    " if is_last else "│   "
                         write_tree(child, prefix + extension, i == len(children) - 1)
                 else:
-                    if path.name == "build.py":
-                        try:
-                            out.write(f"{prefix}    │\n")
-                            out.write(f"{prefix}    ├── CONTENT:\n")
-                            with open(path, 'r', encoding='utf-8') as f:
-                                content = f.read().strip()
-                                lines = content.splitlines() or ["<empty>"]
-                                for line in lines:
-                                    out.write(f"{prefix}    │   {line}\n")
-                            out.write(f"{prefix}    │\n")
-                        except Exception as e:
-                            out.write(f"{prefix}    │   <ошибка чтения: {e}>\n")
-                        return
-
-                    if self._is_text_file(path):
+                    # Показываем содержимое только если файл текстовый и не structure_only
+                    if not structure_only and self._is_text_file(path):
                         try:
                             out.write(f"{prefix}    │\n")
                             out.write(f"{prefix}    ├── CONTENT:\n")
@@ -487,11 +517,20 @@ SECTIONS
                         except Exception as e:
                             out.write(f"{prefix}    │   <ошибка чтения: {e}>\n")
 
-            out.write("📁 OS Project Tree (with text file contents)\n")
+            # Заголовок
+            if structure_only:
+                out.write("📁 OS Project Tree (structure only)\n")
+            elif specific_files:
+                out.write(f"📁 OS Project Tree (selected files: {', '.join(specific_files)})\n")
+            else:
+                out.write("📁 OS Project Tree (with text file contents)\n")
             out.write("=" * 80 + "\n")
+            
             write_tree(root)
 
-        print(f"[OK] Дерево с содержимым сохранено в {output_file}")
+        print(f"[OK] Дерево сохранено в {output_file}")
+        if specific_files:
+            print(f"[*] Отображено файлов: {len(target_files) if target_files else 'все'}")
 
 
 def main():
@@ -504,8 +543,10 @@ def main():
                         help="Очистить объектные файлы (без последующей сборки)")
     parser.add_argument("--distclean", action="store_true",
                         help="Полная очистка: удалить всё, включая зависимости и образы")
-    parser.add_argument("--tree", action="store_true",
-                        help="Сгенерировать OS-TREE.txt с деревом и содержимым текстовых файлов")
+    parser.add_argument("--tree", nargs="*", metavar="FILE",
+                        help="Сгенерировать OS-TREE.txt. Без аргументов - все файлы, с аргументами - только указанные файлы")
+    parser.add_argument("--structure-only", action="store_true",
+                        help="Только структура дерева без содержимого файлов (используется с --tree)")
     parser.add_argument("--name", type=str,
                         help="Имя ОС (например, MyDeer)")
     parser.add_argument("--version", type=str,
@@ -518,8 +559,13 @@ def main():
         builder.clean()
     elif args.distclean:
         builder.distclean()
-    elif args.tree:
-        builder.generate_tree_with_content()
+    elif args.tree is not None:
+        # args.tree будет None если флаг не указан, [] если указан без аргументов, или список файлов
+        specific_files = args.tree if args.tree else None
+        builder.generate_tree_with_content(
+            specific_files=specific_files, 
+            structure_only=args.structure_only
+        )
     elif args.run:
         builder.ensure_deps()
         builder.build_kernel()

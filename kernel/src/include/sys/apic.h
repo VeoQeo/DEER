@@ -71,6 +71,7 @@ struct apic_state {
     bool apic_available;
     bool ioapic_available;
     bool hpet_available;
+    uint32_t bsp_lapic_id;
 };
 
 extern struct apic_state apic_state;
@@ -107,5 +108,8 @@ void lapic_sleep_ms(uint64_t ms);
 void lapic_sleep_us(uint64_t us);
 void lapic_timer_handler(struct registers *regs); 
 void lapic_timer_handler_for_sleep(struct registers *regs); 
+void lapic_send_init(uint32_t lapic_id);
+void lapic_send_startup(uint32_t lapic_id, uint8_t vector);
+void lapic_timer_enable_periodic(void);
 
 #endif // APIC_H

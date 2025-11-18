@@ -17,6 +17,7 @@ struct idt_ptr {
     uint16_t limit;
     uint64_t base;
 } __attribute__((packed));
+extern struct idt_ptr idtp;
 
 #define IDT_PRESENT     (1 << 7)
 #define IDT_RING0       (0 << 5)

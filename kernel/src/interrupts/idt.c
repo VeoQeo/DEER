@@ -6,7 +6,7 @@
 #include <stddef.h>
 
 static struct idt_entry idt[256];
-static struct idt_ptr idtp;
+struct idt_ptr idtp;
 
 extern void idt_flush(uint64_t idt_ptr);
 

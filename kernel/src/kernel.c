@@ -19,9 +19,12 @@
 #include "include/simd/simd.h"
 #include "include/memory/pmm.h"
 #include "include/memory/paging.h"
+#include "include/memory/vmm.h"
 #include "include/memory/heap.h"
 #include "include/sys/acpi.h"
 #include "include/sys/apic.h"
+#include "include/sys/smp.h"
+#include "include/tasking/task.h"
 
 extern struct apic_state apic_state;
 
@@ -52,6 +55,14 @@ volatile struct limine_rsdp_request rsdp_request = {
     .revision = 0
 };
 
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_mp_request mp_request = {
+    .id = LIMINE_MP_REQUEST,
+    .revision = 0,
+    .response = NULL,
+    .flags = 0
+};
+
 __attribute__((used, section(".limine_requests_start")))
 static volatile LIMINE_REQUESTS_START_MARKER;
 
@@ -62,22 +73,32 @@ static volatile struct limine_hhdm_response *hhdm_response = NULL;
 static volatile struct limine_memmap_response *memmap_response = NULL;
 volatile struct limine_rsdp_response *rsdp_response = NULL;
 
+void initialize_memory_subsystems(void) {
+    serial_puts("[DEER] Initializing Physical Memory Manager...\n");
+    pmm_init(memmap_response, hhdm_response);
+    serial_puts("[DEER] PMM initialized\n");
+
+    serial_puts("[DEER] Initializing Paging...\n");
+    paging_init(hhdm_response);
+    serial_puts("[DEER] Paging initialized\n");
+
+    serial_puts("[DEER] Initializing Kernel Heap...\n");
+    heap_init();
+    serial_puts("[DEER] Heap initialized\n");
+
+    serial_puts("[DEER] Initializing Virtual Memory Manager...\n");
+    vmm_init(hhdm_response);
+    serial_puts("[DEER] VMM initialized\n");
+}
+
 void initialize_subsystems(void) {
     serial_puts("[DEER] Initializing GDT...\n");
     gdt_init();
     gdt_load();
     serial_puts("[DEER] GDT initialized\n");
 
-    serial_puts("[DEER] Initializing paging...\n");
-    paging_init(hhdm_response);
-    serial_puts("[DEER] Paging initialized\n");
-
-    serial_puts("[DEER] Initializing memory(PMM/HEAP)...\n");
-    pmm_init(memmap_response, hhdm_response);
-    heap_init();
-    serial_puts("[DEER] Memory initialized\n");
+    initialize_memory_subsystems();
     
-    // Инициализируем PIC сначала (на всякий случай)
     serial_puts("[DEER] Initializing PIC...\n");
     pic_remap();
     serial_puts("[DEER] PIC remapped\n");
@@ -90,16 +111,18 @@ void initialize_subsystems(void) {
     acpi_init(hhdm_response); 
     serial_puts("[DEER] ACPI initialized\n");
 
-    // Инициализируем APIC с HHDM response (как ACPI)
     serial_puts("[DEER] Initializing APIC...\n");
     apic_init(hhdm_response);
     serial_puts("[DEER] APIC initialized\n");
+
+    serial_puts("[DEER] Initializing SMP...\n");
+    smp_init(mp_request.response);
+    serial_puts("[DEER] SMP initialized\n");
 
     serial_puts("[DEER] Initializing IRQ...\n");
     irq_init();
     serial_puts("[DEER] IRQ initialized\n");
 
-    // Выбираем таймер в зависимости от доступности APIC
     if (apic_state.apic_available && apic_state.ioapic_available) {
         serial_puts("[DEER] Initializing LAPIC timer...\n");
         lapic_timer_init(32, 1000); // IRQ0, 1000Hz
@@ -111,15 +134,13 @@ void initialize_subsystems(void) {
     }
 
     serial_puts("[DEER] Installing timer handler...\n");
-    // Устанавливаем обработчик таймера LAPIC, если APIC активен
     if (apic_state.apic_available && apic_state.ioapic_available) {
-        irq_install_handler(0, lapic_timer_handler); // Используем новый обработчик
+        irq_install_handler(0, lapic_timer_handler); 
         serial_puts("[DEER] LAPIC timer handler installed\n");
     } else {
-        irq_install_handler(0, pit_timer_handler); // Используем старый обработчик для совместимости
+        irq_install_handler(0, pit_timer_handler); 
         serial_puts("[DEER] PIT timer handler installed\n");
     }
-    serial_puts("[DEER] Timer handler installed\n");
 }
 
 void display_system_info(struct limine_framebuffer *fb) {
@@ -131,8 +152,8 @@ void display_system_info(struct limine_framebuffer *fb) {
         
     printf_clear();
     printf_set_color(COLOR_ORANGE);
-    printf("\n\nDEER OS v0.0.1\n");
-    printf("===============\n\n");
+    printf("\n\nDEER OS v0.0.1 - MULTITASKING TEST\n");
+    printf("==================================\n\n");
     printf_set_color(COLOR_CYAN);
     printf("System Status:\n");
     printf("--------------\n");
@@ -140,22 +161,52 @@ void display_system_info(struct limine_framebuffer *fb) {
     printf("GDT: ACTIVE\n");
     printf("IDT: ACTIVE\n");
     printf("PIC: REMAPPED\n");
-    printf("PIT: INITIALIZED\n");
     printf("INTERRUPTS: ENABLED\n");
-    printf("PMM: ACTIVE\n");
+    printf("PMM: ACTIVE (%d MB free)\n", pmm_get_free_memory() / 1024 / 1024);
+    printf("PAGING: ACTIVE\n");
+    printf("HEAP: ACTIVE (%d KB used)\n", heap_get_used_size() / 1024);
+    printf("VMM: ACTIVE\n");
     printf("ACPI: ACTIVE\n");
+    printf("APIC: ACTIVE\n");
 
     print_cpu_features();
     printf("\n");
-        
+    
     printf_set_color(COLOR_GREEN);
-    printf("All systems ready - Timer active\n");
 
-   // acpi_shutdown();
-    extern void lapic_sleep_ms(uint64_t ms); // Импортируем функцию
-    lapic_sleep_ms(10000); // Спит 10 секунд используя LAPIC
+    
+    printf_set_color(COLOR_CYAN);
+    printf("SMP Status:\n");
+    printf("-----------\n");
+    printf_set_color(COLOR_GREEN);
+    printf("SMP: %s\n", smp_state.smp_available ? "AVAILABLE" : "UNAVAILABLE");
+    printf("CPUs: %d/%d running\n", smp_state.started_count, smp_state.cpu_count);
+    printf("BSP: LAPIC ID %d\n", smp_state.bsp_id);
+    
+    for (uint32_t i = 0; i < smp_state.cpu_count && i < 8; i++) {
+        printf("CPU%d: LAPIC ID %d, State: ", 
+               smp_state.cpus[i].id, 
+               smp_state.cpus[i].lapic_id);
+        
+        switch(smp_state.cpus[i].state) {
+            case CPU_STATE_UNUSED: printf("UNUSED"); break;
+            case CPU_STATE_STARTING: printf("STARTING"); break;
+            case CPU_STATE_RUNNING: printf("RUNNING"); break;
+            case CPU_STATE_HALTED: printf("HALTED"); break;
+            default: printf("UNKNOWN"); break;
+        }
+        
+        if (smp_state.cpus[i].is_bsp) {
+            printf(" [BSP]");
+        }
+        printf("\n");
+    }
 
-    printf("\n10 seconds have passed (using LAPIC sleep).");
+    lapic_sleep_ms(3000); 
+
+    printf("\n3 seconds have passed (using LAPIC sleep).");
+    
+    printf("\nSystem operational. Press Ctrl+Alt+G to release mouse from QEMU.\n");
 }
 
 void kernel_main(void) {
@@ -193,12 +244,14 @@ void kernel_main(void) {
 
     initialize_subsystems();
 
+    if (smp_state.smp_available && smp_state.cpu_count > 1) {
+        serial_puts("[DEER] Starting application processors...\n");
+        smp_start_aps();
+    }
+
     serial_puts("[DEER] Enabling interrupts...\n");
     idt_load();
     serial_puts("[DEER] Interrupts enabled\n");
-
-    serial_puts("[DEER] All subsystems initialized successfully\n");
-    serial_puts("[DEER] Timer should tick every second...\n");
 
     struct limine_framebuffer *fb = NULL;
     if (framebuffer_request.response && framebuffer_request.response->framebuffer_count > 0) {
@@ -207,9 +260,9 @@ void kernel_main(void) {
         serial_puts("[DEER] Graphics initialized successfully\n");
     }
 
-    serial_puts("[DEER] Entering main kernel loop...\n");
-    
-    while(1) {       
-        asm volatile("hlt"); 
+    serial_puts("[DEER] Entering kernel main loop...\n");
+
+    while (1) {  
+        asm volatile("hlt");
     }
 }

@@ -46,3 +46,12 @@ void serial_put_hex64(uint64_t v) {
         serial_putc(hex[(v >> i) & 0xF]);
     }
 }
+
+void serial_put_hex8(uint8_t v) {
+    const char *hex = "0123456789ABCDEF";
+    serial_puts("0x");
+    // Выводим старшую тетраду
+    serial_putc(hex[(v >> 4) & 0xF]);
+    // Выводим младшую тетраду
+    serial_putc(hex[v & 0xF]);
+}

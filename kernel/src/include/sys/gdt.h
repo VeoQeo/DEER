@@ -29,9 +29,11 @@ struct gdt_ptr {
 #define GDT_GRANULARITY_4K     (1 << 7)
 #define GDT_GRANULARITY_LONG   (1 << 5)  // 64-bit mode
 
+extern struct gdt_entry gdt[5];
+extern struct gdt_ptr gdt_ptr;
+
 void gdt_init(void);
 void gdt_load(void);
-
 const struct gdt_entry* gdt_get_descriptor(int index);
 
 #endif // GDT_H
