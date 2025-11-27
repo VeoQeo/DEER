@@ -26,6 +26,9 @@
 #include "include/sys/smp.h"
 #include "include/tasking/task.h"
 
+// crypto
+#include "include/crypto/aes.h"
+
 extern struct apic_state apic_state;
 
 __attribute__((used, section(".limine_requests")))
@@ -210,10 +213,24 @@ void display_system_info(struct limine_framebuffer *fb) {
 }
 
 void kernel_main(void) {
+
     enable_sse();
     serial_init();
     serial_puts("[DEER] Kernel started\n");
     serial_puts("[DEER] Detecting CPU features...\n");
+
+    // we load aes256 gcm module load for test build and start
+    // this is just test :D
+    // no ecrypt something, lol
+    {
+        uint8_t test_key[16] = {
+            0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
+            0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c
+        };
+        struct AES_ctx aes_ctx;
+        AES_init_ctx(&aes_ctx, test_key);
+        serial_puts("[DEER] AES context initialized\n");
+    }
 
     serial_puts("[DEER] Initializing SSE...\n");
     if (enable_sse_safe() != 0) {
