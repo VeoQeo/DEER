@@ -1,3 +1,5 @@
+// ** THIS IS MODULE FOR TEST CRYPTO, NOT WORK IN REAL SYSTEM ** //
+
 /*
 
 This is an implementation of the AES algorithm, specifically ECB, CTR and CBC mode.
