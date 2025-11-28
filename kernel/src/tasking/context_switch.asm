@@ -1,11 +1,21 @@
-; contenxt_switch.asm
+; context_switch.asm
+; x86-64 task switch (ring 0, long mode) — CORRECTED
+; Layout (offsets in struct task):
+;   0: r15, 8: r14, 16: r13, 24: r12, 32: r11, 40: r10,
+;   48: r9, 56: r8, 64: rdi, 72: rsi, 80: rbp, 88: rbx,
+;   96: rdx, 104: rcx, 112: rax,
+;   120: rip, 128: rflags, 136: rsp, 144: ss, 152: cs
+
 section .text
-global switch_to_task
+
 global save_current_context
+global switch_to_task
 
 ; void save_current_context(struct task* current);
 save_current_context:
-    ; Save caller-saved + full context (as in ISR)
+    ; Сохраняем RSP до push
+    mov [rdi + 136], rsp
+
     push rax
     push rcx
     push rdx
@@ -22,70 +32,92 @@ save_current_context:
     push r14
     push r15
 
-    ; RSP at this point points to top of saved registers
-    mov [rdi + 0], r15
-    mov [rdi + 8], r14
-    mov [rdi + 16], r13
-    mov [rdi + 24], r12
-    mov [rdi + 32], r11
-    mov [rdi + 40], r10
-    mov [rdi + 48], r9
-    mov [rdi + 56], r8
-    mov [rdi + 64], rdi
-    mov [rdi + 72], rsi
-    mov [rdi + 80], rbp
-    mov [rdi + 88], rbx
-    mov [rdi + 96], rdx
+    ; Сохраняем в структуру (rdi не менялся)
+    mov [rdi + 0],   r15
+    mov [rdi + 8],   r14
+    mov [rdi + 16],  r13
+    mov [rdi + 24],  r12
+    mov [rdi + 32],  r11
+    mov [rdi + 40],  r10
+    mov [rdi + 48],  r9
+    mov [rdi + 56],  r8
+    mov [rdi + 64],  rdi
+    mov [rdi + 72],  rsi
+    mov [rdi + 80],  rbp
+    mov [rdi + 88],  rbx
+    mov [rdi + 96],  rdx
     mov [rdi + 104], rcx
     mov [rdi + 112], rax
 
-    ; Save RIP, CS, RFLAGS, RSP, SS via IRET frame simulation
-    ; But since we're in kernel, we assume CS=0x08, SS=0x10, and use current RSP
     pushfq
     pop rax
-    mov [rdi + 136], rax        ; rflags @ offset 136
+    mov [rdi + 128], rax        ; rflags
 
     lea rax, [.return]
-    mov [rdi + 128], rax        ; rip @ offset 128
+    mov [rdi + 120], rax        ; rip
 
-    mov rax, [rsp + 15*8]       ; original RSP before pushes (15 regs = 120 bytes)
-    mov [rdi + 144], rax        ; rsp @ offset 144
-
-    mov qword [rdi + 152], 0x10 ; ss
-    mov qword [rdi + 136 - 8], 0x08 ; cs @ offset 128 + 8 = 136? Fix layout!
+    mov qword [rdi + 144], 0x10 ; ss
+    mov qword [rdi + 152], 0x08 ; cs
 
 .return:
-    ; Clean up stack (15 pushes)
     add rsp, 15*8
     ret
 
 ; void switch_to_task(struct task* next);
 switch_to_task:
-    ; Load full context
-    mov r15, [rdi + 0]
-    mov r14, [rdi + 8]
-    mov r13, [rdi + 16]
-    mov r12, [rdi + 24]
-    mov r11, [rdi + 32]
-    mov r10, [rdi + 40]
-    mov r9,  [rdi + 48]
-    mov r8,  [rdi + 56]
-    mov rdi, [rdi + 64]   ; WARNING: rdi overwritten! Save elsewhere if needed
+    ; Сохраняем адрес структуры — он нам понадобится до конца!
+    ; Не используем rdi после загрузки из [rax+64]!
+    mov r10, rdi                ; r10 = указатель на struct task
 
-    ; We cannot load rdi this way — better to use a temp register
-    ; Revised version needed for production — this is simplified
+    ; Загружаем регистры, КРОМЕ rdi
+    mov r15, [r10 + 0]
+    mov r14, [r10 + 8]
+    mov r13, [r10 + 16]
+    mov r12, [r10 + 24]
+    mov r11, [r10 + 32]
+    mov r10, [r10 + 40]         ; временно: r10 = сохранённый r10 (но мы его не используем)
+    ; Вместо этого — перезагрузим указатель!
+    mov r10, rdi                ; возвращаем указатель!
 
-    ; Use stack switch + IRET for full context (recommended approach)
-    ; For brevity, we’ll assume a correct layout and use IRETQ
+    mov r9,  [r10 + 48]
+    mov r8,  [r10 + 56]
+    ; Теперь загружаем rdi ПОСЛЕДНИМ
+    mov rsi, [r10 + 72]         ; сохраняем rsi как временный
+    mov rdi, [r10 + 64]         ; теперь rdi = сохранённый rdi
 
-    ; Push IRET frame: SS, RSP, RFLAGS, CS, RIP
-    push qword [rdi + 152]   ; ss
-    push qword [rdi + 144]   ; rsp
-    push qword [rdi + 136]   ; rflags
-    push qword [rdi + 128 + 8] ; cs (note: layout matters!)
-    push qword [rdi + 128]   ; rip
+    mov rbp, [r10 + 80]
+    mov rbx, [r10 + 88]
+    mov rdx, [r10 + 96]
+    mov rcx, [r10 + 104]
+    mov rax, [r10 + 112]
 
-    ; Now load general regs (but rdi already loaded — unsafe!)
-    ; In practice, save rdi early or use different calling convention
+    ; === ОТЛАДКА: вывод 'S' в serial port (0x3F8) ===
+    mov dx, 0x3F8
+    mov al, 'S'
+    out dx, al
+
+    ; Формируем IRET-фрейм НА ТЕКУЩЕМ СТЕКЕ (ядра)
+    ; Важно: используем ИСХОДНЫЙ УКАЗАТЕЛЬ r10!
+    push qword [r10 + 144]  ; ss
+    push qword [r10 + 136]  ; rsp
+    push qword [r10 + 128]  ; rflags
+    push qword [r10 + 152]  ; cs
+    push qword [r10 + 120]  ; rip
+
+    ; === ОТЛАДКА: проверка, что rip != 0 ===
+    ; (необязательно, но можно добавить)
 
     iretq
+
+; === Точка входа для тестовой задачи (для отладки) ===
+; Эту функцию можно вызвать из C как extern void test_task_entry(void);
+global test_task_entry
+test_task_entry:
+    ; Вывод 'X' — задача запущена!
+    mov dx, 0x3F8
+    mov al, 'X'
+    out dx, al
+
+.loop:
+    hlt
+    jmp .loop

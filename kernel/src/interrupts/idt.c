@@ -76,6 +76,7 @@ void idt_set_entry(uint8_t index, uint64_t base, uint16_t selector, uint8_t type
 }
 
 void idt_init(void) {
+
     serial_puts("[IDT] Initializing IDT...\n");
     
     // Обнуляем IDT

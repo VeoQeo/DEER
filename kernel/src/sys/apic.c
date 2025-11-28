@@ -45,8 +45,14 @@ uint64_t lapic_get_ticks(void) {
 }
 
 void lapic_timer_handler(struct registers *regs) {
-    (void)regs; 
+    (void)regs;
     lapic_ticks++;
+
+    // Вызываем планировщик каждые 10 тиков (~10 мс)
+    if (lapic_ticks % 10 == 0) {
+        extern void task_scheduler_tick(void);
+        task_scheduler_tick();
+    }
 }
 
 static volatile bool lapic_sleeping = false;
@@ -340,6 +346,7 @@ void lapic_send_init(uint32_t lapic_id) {
     serial_puts("\n");
     lapic_send_ipi(icr1, icr2);
 }
+
 
 void lapic_send_startup(uint32_t lapic_id, uint8_t vector) { // vector = target_page >> 12
     uint32_t icr1 = (APIC_DELIVERY_MODE_SIPI << APIC_ICR_DELIVERY_MODE_SHIFT) |

@@ -16,5 +16,6 @@ void isr_install_handler(uint8_t num, isr_handler_t handler);
 void isr_uninstall_handler(uint8_t num);
 void exception_handler(struct registers *regs);
 void irq_handler(struct registers *regs);
+void handle_double_fault(struct registers *regs);
 
 #endif // ISR_H

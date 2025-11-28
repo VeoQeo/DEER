@@ -225,7 +225,7 @@ void handle_page_fault(struct registers *regs) {
         }
     }
     
-    printf("\n=== PAGE FAULT ===\n");
+    printf("\nPAGE FAULT\n");
     printf("Fault Address: 0x%x\n", fault_address);
     printf("Error Code: 0x%x\n", error_code);
     
@@ -236,13 +236,6 @@ void handle_page_fault(struct registers *regs) {
     }
     
     printf("Unrecoverable page fault - System Halted\n");
-    for(;;) asm volatile("hlt");
-}
-
-void handle_double_fault(struct registers *regs) {
-    (void)regs; 
-    printf("\n!!! DOUBLE FAULT !!!\n");
-    printf("System Halted\n");
     for(;;) asm volatile("hlt");
 }
 

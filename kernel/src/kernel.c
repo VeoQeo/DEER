@@ -5,6 +5,7 @@
 #include "include/graphics/fb.h"
 #include "include/graphics/color.h"
 #include "include/graphics/font.h"
+#include "include/tasking/task.h"
 #include "include/drivers/serial.h"
 #include "include/graphics/banner.h"
 #include "include/drivers/io.h"
@@ -26,8 +27,8 @@
 #include "include/sys/smp.h"
 #include "include/tasking/task.h"
 
-// crypto
-#include "include/crypto/aes.h"
+#define STACK_SIZE 0x2000
+
 
 extern struct apic_state apic_state;
 
@@ -75,6 +76,16 @@ static volatile LIMINE_REQUESTS_END_MARKER;
 static volatile struct limine_hhdm_response *hhdm_response = NULL;
 static volatile struct limine_memmap_response *memmap_response = NULL;
 volatile struct limine_rsdp_response *rsdp_response = NULL;
+static uint8_t early_heap[64 * 1024];
+static size_t heap_offset = 0;
+
+void* early_malloc(size_t size) {
+    if(heap_offset + size > sizeof(early_heap)) return NULL;
+
+    void* ptr = &early_heap[heap_offset];
+    heap_offset += size;
+    return ptr;
+}
 
 void initialize_memory_subsystems(void) {
     serial_puts("[DEER] Initializing Physical Memory Manager...\n");
@@ -212,74 +223,98 @@ void display_system_info(struct limine_framebuffer *fb) {
     printf("\nSystem operational. Press Ctrl+Alt+G to release mouse from QEMU.\n");
 }
 
-void kernel_main(void) {
+// task 1 func
+__attribute__((noreturn)) void task1_func(void) {
+    volatile int i = 0;
+    while (1) {
+        if (i % 10000000 == 0) {
+            printf("[TASK1] Running...\n");
+        }
+        i++;
+    }
+}
+// task 2 func for test
+__attribute__((noreturn)) void task2_func(void) {
+    volatile int j = 0;
+    while (1) {
+        if (j % 10000000 == 0) {
+            printf("[TASK2] Running...\n");
+        }
+        j++;
+    }
+}
+// запускаем и собираем наши задачи, в нашем случае таск1 и таск2
+void setup_and_start_tasks(void) {
+    printf("[TASK] Setting up test tasks...\n"); // выводим сообщение о старте
 
-    enable_sse();
+    tasking_init();
+
+#define TASK_STACK_SIZE 0x4000 // передаем через макрос максимальный размер в памяти задачи
+    void *stack1 = kmalloc(TASK_STACK_SIZE);
+    void *stack2 = kmalloc(TASK_STACK_SIZE);
+
+    static struct task task1, task2;
+
+    task_init(&task1, (uint64_t)task1_func, (char*)stack1 + TASK_STACK_SIZE, 1);
+    task_init(&task2, (uint64_t)task2_func, (char*)stack2 + TASK_STACK_SIZE, 2);
+
+    extern struct task *current_task;
+    current_task = &task1;
+    current_task->state = TASK_STATE_RUNNING;
+
+    task_add(&task1);
+    task_add(&task2);
+
+    serial_puts("[TASK] Tasks created. Switching to first task...\n");
+
+    extern void switch_to_task(struct task *t);
+    switch_to_task(current_task);
+
+    // Эта строка никогда не выполнится
+    printf("[TASK] ERROR: Returned from switch_to_task!\n");
+}
+
+void kernel_main(void) {
+    // 1. Инициализация минимальных сервисов (serial, SSE)
     serial_init();
     serial_puts("[DEER] Kernel started\n");
-    serial_puts("[DEER] Detecting CPU features...\n");
 
-    // we load aes256 gcm module load for test build and start
-    // this is just test :D
-    // no ecrypt something, lol
-    {
-        uint8_t test_key[16] = {
-            0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
-            0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c
-        };
-        struct AES_ctx aes_ctx;
-        AES_init_ctx(&aes_ctx, test_key);
-        serial_puts("[DEER] AES context initialized\n");
-    }
-
-    serial_puts("[DEER] Initializing SSE...\n");
     if (enable_sse_safe() != 0) {
         serial_puts("[DEER] ERROR: Failed to initialize SSE!\n");
     }
 
+    // 2. ОБЯЗАТЕЛЬНО: получить ответы от Limine СРАЗУ
     hhdm_response = hhdm_request.response;
     memmap_response = memmap_request.response;
     rsdp_response = rsdp_request.response;
-    
+
+    // 3. Проверка критически важных компонентов
     if (!hhdm_response) {
-        serial_puts("[DEER] ERROR: No HHDM response from bootloader!\n");
-    } else {
-        serial_puts("[DEER] HHDM available\n");
+        serial_puts("[DEER] FATAL: HHDM response is NULL!\n");
+        for (;;);
     }
-    
     if (!memmap_response) {
-        serial_puts("[DEER] ERROR: No memory map response from bootloader!\n");
-    } else {
-        serial_puts("[DEER] Memory map available\n");
+        serial_puts("[DEER] FATAL: Memory map is NULL!\n");
+        for (;;);
     }
 
-    if (!rsdp_response) {
-        serial_puts("[DEER] WARNING: No RSDP response from bootloader!\n");
-    } else {
-        serial_puts("[DEER] RSDP available\n");
-    }
+    serial_puts("[DEER] Limine responses OK\n");
 
-    initialize_subsystems();
+    // 4. Инициализация ВСЕХ подсистем (включая память)
+    initialize_subsystems();  // ← теперь hhdm_response != NULL
 
-    if (smp_state.smp_available && smp_state.cpu_count > 1) {
-        serial_puts("[DEER] Starting application processors...\n");
-        smp_start_aps();
-    }
+    // 5. Только теперь можно создавать задачи
+    setup_and_start_tasks();  // ← использует kmalloc(), который теперь работает
 
-    serial_puts("[DEER] Enabling interrupts...\n");
-    idt_load();
-    serial_puts("[DEER] Interrupts enabled\n");
-
-    struct limine_framebuffer *fb = NULL;
+    // 6. Дальнейшая инициализация (графика, SMP и т.д.)
     if (framebuffer_request.response && framebuffer_request.response->framebuffer_count > 0) {
-        fb = framebuffer_request.response->framebuffers[0];
+        struct limine_framebuffer *fb = framebuffer_request.response->framebuffers[0];
         display_system_info(fb);
-        serial_puts("[DEER] Graphics initialized successfully\n");
     }
 
-    serial_puts("[DEER] Entering kernel main loop...\n");
-
-    while (1) {  
+    // 7. Главный цикл
+    serial_puts("[DEER] Entering idle loop...\n");
+    while (1) {
         asm volatile("hlt");
     }
 }
