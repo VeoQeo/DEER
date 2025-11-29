@@ -40,12 +40,6 @@ static const char *exception_messages[32] = {
     "Reserved"
 };
 
-void handle_double_fault(struct registers *regs) {
-    serial_puts("\n[EXCEPTION] DOUBLE FAULT! System halted.\n");
-    // Можно вывести regs->rip, но при double fault он может быть недостоверен
-    for (;;);
-}
-
 void exception_handler(struct registers *regs) {
     if (regs->int_no < 32) {
         printf("\n=== EXCEPTION %d ===\n", regs->int_no);

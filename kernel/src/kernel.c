@@ -249,9 +249,18 @@ void setup_and_start_tasks(void) {
 
     tasking_init();
 
-#define TASK_STACK_SIZE 0x4000 // передаем через макрос максимальный размер в памяти задачи
-    void *stack1 = kmalloc(TASK_STACK_SIZE);
-    void *stack2 = kmalloc(TASK_STACK_SIZE);
+#define TASK_STACK_SIZE 0x4000
+    void *raw_stack1 = kmalloc(TASK_STACK_SIZE);
+    void *raw_stack2 = kmalloc(TASK_STACK_SIZE);
+
+    // Выравниваем стек по 16-байтной границе (требование ABI x86-64)
+    uintptr_t stack1_top = (uintptr_t)raw_stack1 + TASK_STACK_SIZE;
+    uintptr_t stack2_top = (uintptr_t)raw_stack2 + TASK_STACK_SIZE;
+    stack1_top &= ~0xF;
+    stack2_top &= ~0xF;
+
+    void *stack1 = (void*)stack1_top;
+    void *stack2 = (void*)stack2_top;
 
     static struct task task1, task2;
 

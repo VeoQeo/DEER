@@ -47,6 +47,13 @@ void paging_load_cr3(uint64_t cr3_value) {
     asm volatile("mov %0, %%cr3" :: "r"(cr3_value));
 }
 
+// handle double fault
+void handle_double_fault(struct registers *regs) {
+    serial_puts("\n[EXCEPTION] DOUBLE FAULT! System halted.\n");
+    
+    for (;;);
+}
+
 uint64_t paging_get_cr3(void) {
     uint64_t cr3;
     asm volatile("mov %%cr3, %0" : "=r"(cr3));
