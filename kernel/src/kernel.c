@@ -282,8 +282,7 @@ void kernel_main(void) {
     if (enable_sse_safe() != 0) {
         serial_puts("[DEER] ERROR: Failed to initialize SSE!\n");
     }
-
-    // 2. ОБЯЗАТЕЛЬНО: получить ответы от Limine СРАЗУ
+    // 2. Получаем ответ от Limine
     hhdm_response = hhdm_request.response;
     memmap_response = memmap_request.response;
     rsdp_response = rsdp_request.response;
@@ -301,12 +300,11 @@ void kernel_main(void) {
     serial_puts("[DEER] Limine responses OK\n");
 
     // 4. Инициализация ВСЕХ подсистем (включая память)
-    initialize_subsystems();  // ← теперь hhdm_response != NULL
+    initialize_subsystems();
 
-    // 5. Только теперь можно создавать задачи
-    setup_and_start_tasks();  // ← использует kmalloc(), который теперь работает
+    // 5. Запускаем задачи
+    setup_and_start_tasks();  
 
-    // 6. Дальнейшая инициализация (графика, SMP и т.д.)
     if (framebuffer_request.response && framebuffer_request.response->framebuffer_count > 0) {
         struct limine_framebuffer *fb = framebuffer_request.response->framebuffers[0];
         display_system_info(fb);
